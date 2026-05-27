@@ -1,0 +1,174 @@
+/* ─── ZombieGuard Global CSS ─────────────────────────────────────
+   Design system based on VaultShield template pattern:
+   - Display font: Bebas Neue (impact headings)
+   - Mono font:    IBM Plex Mono (code, labels, KPIs)
+   - Body font:    Instrument Sans (body text)
+   - Dark military colour palette with red accent
+─────────────────────────────────────────────────────────────── */
+
+:root {
+  --bg:      #050a0f;
+  --bg1:     #080e16;
+  --bg2:     #0d1520;
+  --bg3:     #111d2c;
+  --bg4:     #162335;
+  --border:  #1e3050;
+  --border2: #263d60;
+
+  --red:     #e8242c;
+  --red2:    #b81820;
+  --red-t:   rgba(232,36,44,.12);
+
+  --teal:    #00d4a8;
+  --teal2:   #00a882;
+  --teal-t:  rgba(0,212,168,.1);
+
+  --amber:   #f5a623;
+  --amber-t: rgba(245,166,35,.1);
+
+  --purple:  #9b59f5;
+  --purple-t:rgba(155,89,245,.1);
+
+  --blue:    #1e6fff;
+  --blue-t:  rgba(30,111,255,.1);
+
+  --green:   #1db954;
+  --green-t: rgba(29,185,84,.1);
+
+  --txt0:    #dde8f5;
+  --txt1:    #7a9ab8;
+  --txt2:    #3d5570;
+  --txt3:    #1d3050;
+
+  --font-display: 'Bebas Neue', sans-serif;
+  --font-mono:    'IBM Plex Mono', monospace;
+  --font-body:    'Instrument Sans', sans-serif;
+}
+
+/* ─── Reset ─── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { font-size: 13px; scroll-behavior: smooth; }
+
+/* ─── Body ─── */
+body {
+  background: var(--bg);
+  color: var(--txt0);
+  font-family: var(--font-body);
+  min-height: 100vh;
+  overflow-x: hidden;
+  background-image:
+    radial-gradient(ellipse 80% 40% at 50% -20%, rgba(0,212,168,.06) 0%, transparent 60%),
+    linear-gradient(180deg, var(--bg) 0%, var(--bg1) 100%);
+}
+
+/* ─── Grid background (VaultShield-style) ─── */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  background-image:
+    linear-gradient(var(--border) 1px, transparent 1px),
+    linear-gradient(90deg, var(--border) 1px, transparent 1px);
+  background-size: 60px 60px;
+  opacity: .35;
+}
+
+/* ─── Scrollbar ─── */
+::-webkit-scrollbar { width: 4px; height: 4px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 2px; }
+::-webkit-scrollbar-thumb:hover { background: var(--txt2); }
+
+/* ─── Range input ─── */
+input[type=range] {
+  -webkit-appearance: none;
+  width: 100%; height: 3px;
+  background: var(--bg1);
+  border-radius: 2px;
+  cursor: pointer;
+  accent-color: var(--teal);
+}
+input[type=range]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 14px; height: 14px;
+  border-radius: 50%;
+  background: var(--teal);
+  cursor: pointer;
+  border: 2px solid var(--bg2);
+  box-shadow: 0 0 8px var(--teal-t);
+}
+
+/* ─── Animations ─── */
+@keyframes pulse {
+  0%,100% { opacity: 1; box-shadow: 0 0 0 0 rgba(0,212,168,.3); }
+  50%      { opacity: .6; box-shadow: 0 0 0 4px transparent; }
+}
+@keyframes pulse-red {
+  0%,100% { opacity: 1; }
+  50%      { opacity: .4; }
+}
+@keyframes blink {
+  0%,100% { opacity: 1; }
+  50%      { opacity: .15; }
+}
+@keyframes marquee {
+  0%   { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
+}
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(14px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes fadeInRight {
+  from { opacity: 0; transform: translateX(-10px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+@keyframes scanLine {
+  0%   { top: 0; opacity: .6; }
+  100% { top: 100%; opacity: 0; }
+}
+@keyframes glowPulse {
+  0%,100% { box-shadow: 0 0 20px rgba(232,36,44,.2); }
+  50%      { box-shadow: 0 0 40px rgba(232,36,44,.5); }
+}
+
+/* ─── Utility classes ─── */
+.display  { font-family: var(--font-display); }
+.mono     { font-family: var(--font-mono); }
+.fade-up  { animation: fadeInUp .4s ease both; }
+
+/* ─── KPI cards hover ─── */
+.kpi-card { transition: transform .15s, border-color .2s; }
+.kpi-card:hover { transform: translateY(-2px); }
+
+/* ─── Nav hover ─── */
+.nav-item { transition: all .12s; }
+.nav-item:hover { background: var(--bg2) !important; color: var(--txt0) !important; }
+
+/* ─── Button transitions ─── */
+.btn-base { transition: all .15s; }
+
+/* ─── Table row hover ─── */
+.zt-row:hover td { background: var(--bg3) !important; }
+
+/* ─── Panel border glow on hover ─── */
+.panel-hover { transition: border-color .2s; }
+.panel-hover:hover { border-color: var(--border2) !important; }
+
+/* ─── Scan line effect on scanner ─── */
+.scan-line::after {
+  content: '';
+  position: absolute;
+  left: 0; right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, var(--teal), transparent);
+  animation: scanLine 2s linear infinite;
+}
+
+/* ─── Risk score glow ─── */
+.score-crit { animation: glowPulse 2s ease infinite; }

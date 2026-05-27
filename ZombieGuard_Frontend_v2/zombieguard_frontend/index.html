@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ZombieGuard — Zombie API Discovery & Defence | iDEA 2.0 | PS9 | Team Insiders</title>
+  <meta name="description" content="ZombieGuard: AI-powered Zombie API Discovery & Defence System for Union Bank of India. iDEA 2.0 Hackathon PS9." />
+  <!-- Bebas Neue + IBM Plex Mono + Instrument Sans (mirrors VaultShield template font strategy) -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=IBM+Plex+Mono:wght@400;500;600&family=Instrument+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <!-- Chart.js for data visualisation -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+  <style>
+    /* Base reset — body background before React mounts */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body, #root { height: 100%; }
+    body {
+      background: #050a0f;
+      color: #dde8f5;
+      font-family: 'Instrument Sans', sans-serif;
+    }
+    /* Loading spinner shown before React hydrates */
+    #root:empty::after {
+      content: '🧟 ZOMBIEGUARD LOADING…';
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 24px;
+      letter-spacing: 4px;
+      color: #e8242c;
+      text-shadow: 0 0 30px rgba(232,36,44,.4);
+    }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+  <script type="module" src="/src/main.jsx"></script>
+</body>
+</html>

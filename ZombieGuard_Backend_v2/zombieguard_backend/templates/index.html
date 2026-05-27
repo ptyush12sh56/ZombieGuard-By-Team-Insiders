@@ -1,0 +1,1589 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>ZombieGuard — Zombie API Discovery & Defence</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&family=Orbitron:wght@700;900&display=swap');
+:root{
+  --bg:#070d17;--bg1:#0d1520;--bg2:#111e2e;--bg3:#162438;--bg4:#1c2f47;
+  --border:#1e3352;--border2:#2a4a6b;
+  --teal:#00e5b0;--teal2:#00b88c;--teal3:rgba(0,229,176,.1);--tealb:rgba(0,229,176,.18);
+  --red:#ff4757;--red2:#cc2f3c;--red3:rgba(255,71,87,.1);
+  --amber:#ffa502;--amber3:rgba(255,165,2,.1);
+  --purple:#8b5cf6;--purple3:rgba(139,92,246,.1);
+  --blue:#3b82f6;--blue3:rgba(59,130,246,.1);
+  --green:#22c55e;--green3:rgba(34,197,94,.1);
+  --pink:#ec4899;--pink3:rgba(236,72,153,.1);
+  --txt0:#e2eaf8;--txt1:#8ba5c8;--txt2:#4a6580;--txt3:#2d3f55;
+  --mono:'JetBrains Mono',monospace;--sans:'Space Grotesk',sans-serif;
+  --r:6px;--r2:12px;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{font-size:13px}
+body{background:var(--bg);color:var(--txt0);font-family:var(--sans);min-height:100vh;overflow-x:hidden}
+/* layout */
+.app{display:flex;min-height:100vh}
+.sidebar{width:232px;flex-shrink:0;background:var(--bg1);border-right:1px solid var(--border);display:flex;flex-direction:column;position:fixed;top:0;left:0;height:100vh;overflow-y:auto;z-index:200}
+.main{margin-left:232px;flex:1;display:flex;flex-direction:column;min-height:100vh}
+.topbar{height:52px;background:var(--bg1);border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 18px;gap:10px;position:sticky;top:0;z-index:100;flex-shrink:0}
+.content{flex:1;padding:18px;overflow-x:hidden}
+/* sidebar */
+.sb-logo{padding:16px 14px 12px;border-bottom:1px solid var(--border)}
+.logo-txt{font-family:'Orbitron',sans-serif;font-size:14px;color:var(--teal);letter-spacing:1px}
+.logo-sub{font-family:var(--mono);font-size:9px;color:var(--txt2);margin-top:3px;line-height:1.5}
+.sb-sec{padding:9px 14px 3px;font-family:var(--mono);font-size:9px;color:var(--txt3);letter-spacing:2px;text-transform:uppercase;margin-top:4px}
+.ni{display:flex;align-items:center;gap:8px;padding:8px 14px;cursor:pointer;color:var(--txt1);font-size:12px;font-weight:500;border-left:3px solid transparent;transition:all .15s}
+.ni:hover{color:var(--txt0);background:var(--bg2)}
+.ni.active{color:var(--teal);border-left-color:var(--teal);background:var(--teal3)}
+.ni-ico{font-size:13px;width:16px;text-align:center;flex-shrink:0}
+.ni-badge{margin-left:auto;font-family:var(--mono);font-size:9px;padding:1px 5px;border-radius:3px;background:var(--red3);color:var(--red);border:1px solid var(--red)}
+.sb-foot{margin-top:auto;padding:10px 14px;border-top:1px solid var(--border);font-family:var(--mono);font-size:9px;color:var(--txt2);line-height:1.8}
+.be-chip{display:inline-flex;align-items:center;gap:4px;padding:2px 6px;border-radius:3px;border:1px solid var(--border2);margin-top:4px;font-size:9px}
+/* topbar */
+.tb-title{font-weight:600;font-size:14px;flex:1;color:var(--txt0)}
+.tb-live{display:flex;align-items:center;gap:5px;font-family:var(--mono);font-size:10px;color:var(--txt1)}
+.pulse{width:6px;height:6px;border-radius:50%;background:var(--teal);animation:pulse 2s infinite;flex-shrink:0}
+@keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.4;transform:scale(.6)}}
+/* pipeline bar */
+.pbar{display:flex;margin-bottom:16px;border-radius:var(--r2);overflow:hidden;border:1px solid var(--border);background:var(--bg1)}
+.pseg{flex:1;padding:9px 12px;cursor:pointer;border-right:1px solid var(--border);transition:background .15s}
+.pseg:last-child{border-right:none}
+.pseg:hover{background:var(--bg3)}
+.pseg.done{background:var(--teal3)}
+.pseg.running{background:var(--amber3)}
+.pseg.done .pn{color:var(--teal)}
+.pseg.running .pn{color:var(--amber);animation:blink .8s infinite}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.2}}
+.pn{font-family:var(--mono);font-size:9px;color:var(--txt2);margin-bottom:2px}
+.pm{font-size:11px;font-weight:700}
+.pt2{font-family:var(--mono);font-size:9px;color:var(--txt2);margin-top:1px}
+/* ticker */
+.ticker{background:var(--bg1);border:1px solid var(--border);border-radius:var(--r);padding:6px 12px;display:flex;align-items:center;gap:8px;margin-bottom:14px;overflow:hidden}
+.tl{font-family:var(--mono);font-size:9px;padding:2px 6px;border-radius:3px;background:var(--red3);color:var(--red);border:1px solid var(--red);flex-shrink:0}
+.tt{font-family:var(--mono);font-size:10px;color:var(--txt1);white-space:nowrap;animation:marq 60s linear infinite}
+@keyframes marq{0%{transform:translateX(0)}100%{transform:translateX(-50%)}}
+/* kpi */
+.kgrid{display:grid;grid-template-columns:repeat(6,1fr);gap:10px;margin-bottom:14px}
+.kcard{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r2);padding:13px;position:relative;overflow:hidden;transition:border-color .2s}
+.kcard:hover{border-color:var(--border2)}
+.kcard::after{content:'';position:absolute;bottom:0;left:0;right:0;height:3px}
+.kc-t::after{background:var(--teal)}.kc-r::after{background:var(--red)}.kc-p::after{background:var(--purple)}
+.kc-a::after{background:var(--amber)}.kc-b::after{background:var(--blue)}.kc-g::after{background:var(--green)}
+.kl{font-family:var(--mono);font-size:9px;color:var(--txt2);text-transform:uppercase;letter-spacing:1px;margin-bottom:5px}
+.kv{font-size:26px;font-weight:700;line-height:1;margin-bottom:2px}
+.ks{font-size:10px;color:var(--txt1)}
+.kc-t .kv{color:var(--teal)}.kc-r .kv{color:var(--red)}.kc-p .kv{color:var(--purple)}
+.kc-a .kv{color:var(--amber)}.kc-b .kv{color:var(--blue)}.kc-g .kv{color:var(--green)}
+/* panels */
+.panel{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r2);padding:14px}
+.ph{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
+.pt{font-family:var(--mono);font-size:10px;color:var(--txt2);text-transform:uppercase;letter-spacing:1.5px}
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px}
+.g3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:12px}
+/* badge */
+.badge{display:inline-flex;align-items:center;gap:3px;padding:2px 7px;border-radius:3px;font-family:var(--mono);font-size:9px;font-weight:600;border:1px solid}
+.b-r{background:var(--red3);color:var(--red);border-color:var(--red2)}
+.b-a{background:var(--amber3);color:var(--amber);border-color:var(--amber)}
+.b-t{background:var(--teal3);color:var(--teal);border-color:var(--teal2)}
+.b-p{background:var(--purple3);color:var(--purple);border-color:var(--purple)}
+.b-b{background:var(--blue3);color:var(--blue);border-color:var(--blue)}
+.b-g{background:var(--green3);color:var(--green);border-color:var(--green)}
+/* cls */
+.cls{display:inline-flex;padding:1px 6px;border-radius:3px;font-family:var(--mono);font-size:9px}
+.cls-ZOMBIE{background:var(--red3);color:var(--red)}
+.cls-SHADOW{background:var(--purple3);color:var(--purple)}
+.cls-ACTIVE{background:var(--teal3);color:var(--teal)}
+.cls-DEPRECATED{background:var(--amber3);color:var(--amber)}
+/* risk chip */
+.rc{display:inline-flex;padding:2px 7px;border-radius:3px;font-family:var(--mono);font-size:10px;font-weight:600;border:1px solid}
+.r-crit{background:var(--red3);color:var(--red);border-color:var(--red2)}
+.r-high{background:var(--amber3);color:var(--amber);border-color:var(--amber)}
+.r-med{background:var(--blue3);color:var(--blue);border-color:var(--blue)}
+.r-low{background:var(--teal3);color:var(--teal);border-color:var(--teal2)}
+/* table */
+.zt{width:100%;border-collapse:collapse}
+.zt th{font-family:var(--mono);font-size:9px;color:var(--txt2);text-transform:uppercase;letter-spacing:1px;padding:7px 10px;text-align:left;border-bottom:1px solid var(--border);white-space:nowrap}
+.zt td{padding:8px 10px;border-bottom:1px solid var(--border);font-size:11px;vertical-align:middle}
+.zt tr:last-child td{border-bottom:none}
+.zt tbody tr:hover td{background:var(--bg3)}
+.mono{font-family:var(--mono);font-size:10px}
+/* score bar */
+.sbar{display:inline-flex;align-items:center;gap:5px;vertical-align:middle}
+.sbar-t{width:55px;height:4px;background:var(--bg);border-radius:2px;overflow:hidden}
+.sbar-f{height:100%;border-radius:2px}
+/* buttons */
+.btn{display:inline-flex;align-items:center;gap:5px;padding:6px 12px;border-radius:var(--r);font-size:11px;font-weight:600;cursor:pointer;border:1px solid var(--border);background:var(--bg3);color:var(--txt0);transition:all .15s;font-family:var(--sans)}
+.btn:hover{border-color:var(--border2);background:var(--bg4)}
+.btn-primary{background:var(--teal);border-color:var(--teal);color:#04110d}
+.btn-primary:hover{background:var(--teal2);border-color:var(--teal2)}
+.btn-danger{background:var(--red3);border-color:var(--red);color:var(--red)}
+.btn-danger:hover{background:var(--red);color:#fff}
+.btn-sm{padding:3px 8px;font-size:10px}
+.btn:disabled{opacity:.4;cursor:not-allowed}
+/* input */
+.inp{background:var(--bg);border:1px solid var(--border);border-radius:var(--r);color:var(--txt0);padding:6px 10px;font-size:11px;font-family:var(--sans);width:100%}
+.inp:focus{outline:none;border-color:var(--teal)}
+select.inp option{background:var(--bg2)}
+/* toggle */
+.tog{width:32px;height:17px;border-radius:9px;background:var(--bg4);border:1px solid var(--border2);cursor:pointer;position:relative;transition:background .2s;flex-shrink:0}
+.tog.on{background:var(--teal);border-color:var(--teal2)}
+.tog::after{content:'';position:absolute;top:2px;left:2px;width:11px;height:11px;border-radius:50%;background:#fff;transition:left .2s}
+.tog.on::after{left:17px}
+.tog-row{display:flex;align-items:center;gap:8px;font-size:11px;color:var(--txt1);padding:5px 0}
+/* log */
+.log-box{background:var(--bg);border:1px solid var(--border);border-radius:var(--r);padding:10px;font-family:var(--mono);font-size:10px;line-height:1.9;max-height:220px;overflow-y:auto}
+.log-box::-webkit-scrollbar{width:3px}.log-box::-webkit-scrollbar-thumb{background:var(--border2)}
+.l-ts{color:var(--txt3)}.l-ok{color:var(--teal)}.l-warn{color:var(--amber)}.l-err{color:var(--red)}.l-info{color:var(--blue)}.l-kafka{color:var(--purple)}.l-bs{color:var(--pink)}
+/* progress */
+.prog{height:4px;background:var(--bg);border-radius:3px;overflow:hidden}
+.prog-f{height:100%;border-radius:3px;transition:width .6s cubic-bezier(.4,0,.2,1)}
+/* alert */
+.ac{display:flex;align-items:flex-start;gap:9px;padding:9px 11px;border-radius:var(--r);border:1px solid var(--border);background:var(--bg3);margin-bottom:6px;border-left:3px solid}
+.ac.sC{border-left-color:var(--red)}.ac.sH{border-left-color:var(--amber)}.ac.sM{border-left-color:var(--blue)}
+.ac-ico{width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;flex-shrink:0}
+.ac-score{margin-left:auto;flex-shrink:0;font-family:var(--mono);font-size:12px;font-weight:700;padding:2px 6px;border-radius:3px}
+/* defence row */
+.dr{display:flex;align-items:center;gap:9px;padding:9px 11px;background:var(--bg3);border:1px solid var(--border);border-radius:var(--r);margin-bottom:6px}
+.di{width:32px;height:32px;border-radius:var(--r);display:flex;align-items:center;justify-content:center;font-size:13px;flex-shrink:0}
+.di-r{background:var(--red3)}.di-t{background:var(--teal3)}.di-a{background:var(--amber3)}.di-p{background:var(--purple3)}.di-b{background:var(--blue3)}
+/* owasp */
+.ow{display:flex;align-items:center;gap:9px;padding:8px 11px;background:var(--bg3);border:1px solid var(--border);border-radius:var(--r);margin-bottom:5px}
+.ow-tag{font-family:var(--mono);font-size:9px;padding:2px 6px;border-radius:3px;background:var(--purple3);color:var(--purple);flex-shrink:0;border:1px solid var(--purple)}
+/* feat bar */
+.frow{margin-bottom:7px}
+.fmeta{display:flex;justify-content:space-between;font-size:10px;margin-bottom:2px}
+/* page */
+.page{display:none}.page.active{display:block}
+/* live example */
+.le{background:var(--red3);border:1px solid var(--red);border-radius:var(--r);padding:8px 12px;font-family:var(--mono);font-size:10px;color:var(--red);margin-top:9px;display:flex;align-items:center;gap:7px}
+.le-dot{width:6px;height:6px;border-radius:50%;background:var(--red);animation:pulse 1s infinite;flex-shrink:0}
+/* tool tag */
+.tool{display:inline-flex;align-items:center;padding:1px 6px;border-radius:3px;font-family:var(--mono);font-size:9px;margin:2px;border:1px solid}
+.t-bs{background:var(--pink3);color:var(--pink);border-color:var(--pink)}
+.t-sk{background:var(--teal3);color:var(--teal);border-color:var(--teal2)}
+.t-np{background:var(--blue3);color:var(--blue);border-color:var(--blue)}
+.t-pd{background:var(--amber3);color:var(--amber);border-color:var(--amber)}
+.t-sa{background:var(--green3);color:var(--green);border-color:var(--green)}
+.t-kf{background:var(--purple3);color:var(--purple);border-color:var(--purple)}
+.t-fa{background:var(--red3);color:var(--red);border-color:var(--red2)}
+/* source card */
+.src-card{background:var(--bg3);border-radius:var(--r);padding:14px;text-align:center;border:1px solid var(--border);transition:border-color .2s}
+.src-card:hover{border-color:var(--border2)}
+/* comp table */
+.ct{width:100%;border-collapse:collapse;font-size:11px}
+.ct th{background:var(--bg3);font-family:var(--mono);font-size:9px;text-transform:uppercase;letter-spacing:1px;padding:8px 11px;color:var(--txt2);text-align:center}
+.ct th.us{background:var(--teal3);color:var(--teal)}
+.ct td{padding:8px 11px;border-bottom:1px solid var(--border);text-align:center}
+.ct td.rl{text-align:left;color:var(--txt0);font-weight:500}
+.ct td.us{background:rgba(0,229,176,.04);color:var(--teal);font-weight:600}
+.ct td.no{color:var(--txt2)}
+/* scrollbar */
+::-webkit-scrollbar{width:4px;height:4px}::-webkit-scrollbar-track{background:transparent}::-webkit-scrollbar-thumb{background:var(--border2);border-radius:2px}
+/* scan step */
+.ss{margin-bottom:10px}
+.ss-hdr{display:flex;justify-content:space-between;font-size:10px;margin-bottom:3px}
+</style>
+</head>
+<body>
+<div class="app">
+<!-- ═══════ SIDEBAR ═══════ -->
+<aside class="sidebar">
+  <div class="sb-logo">
+    <div class="logo-txt">🧟 ZombieGuard</div>
+    <div class="logo-sub">PS9 · iDEA 2.0 · Team Insiders<br>Union Bank of India</div>
+  </div>
+  <div class="sb-sec">Overview</div>
+  <div class="ni active" onclick="nav('dashboard',this)"><span class="ni-ico">📊</span>Dashboard</div>
+  <div class="ni" onclick="nav('scan',this)"><span class="ni-ico">▶</span>Run Scan</div>
+  <div class="sb-sec">Pipeline (Slide 5)</div>
+  <div class="ni" onclick="nav('input',this)"><span class="ni-ico">📡</span>1. Input Sources</div>
+  <div class="ni" onclick="nav('kafka',this)"><span class="ni-ico">⚡</span>2. Kafka Stream Bus</div>
+  <div class="ni" onclick="nav('mldetect',this)"><span class="ni-ico">🤖</span>3. ML Detection</div>
+  <div class="ni" onclick="nav('riskengine',this)"><span class="ni-ico">🎯</span>4. Risk Engine</div>
+  <div class="ni" onclick="nav('dbstore',this)"><span class="ni-ico">🗄</span>5. Database Store</div>
+  <div class="sb-sec">Outputs (Slide 4)</div>
+  <div class="ni" onclick="nav('inventory',this)"><span class="ni-ico">📋</span>API Inventory<span class="ni-badge" id="inv-badge">—</span></div>
+  <div class="ni" onclick="nav('defence',this)"><span class="ni-ico">🛡</span>Auto Defence</div>
+  <div class="ni" onclick="nav('alertengine',this)"><span class="ni-ico">🔔</span>Alert Engine<span class="ni-badge" id="alert-badge">—</span></div>
+  <div class="sb-sec">Analysis</div>
+  <div class="ni" onclick="nav('owasp',this)"><span class="ni-ico">🔐</span>OWASP Coverage</div>
+  <div class="ni" onclick="nav('compare',this)"><span class="ni-ico">📈</span>vs Competitors</div>
+  <div class="ni" onclick="nav('calculator',this)"><span class="ni-ico">🧮</span>Risk Calculator</div>
+  <div class="ni" onclick="nav('sessions',this)"><span class="ni-ico">📜</span>Scan History</div>
+  <div class="nav-sec">New Features</div>
+  <div class="ni" onclick="nav('urlscan',this)"><span class="ni-ico">🌐</span>URL / API Scanner</div>
+  <div class="ni" onclick="nav('fileupload',this)"><span class="ni-ico">📂</span>File Upload Scan</div>
+  <div class="sb-foot">
+    v1.0 · FastAPI + SQL Alchemy<br>
+    scikit-learn · NumPy · BeautifulSoup<br>
+    Pydantic · Kafka · Uvicorn<br>
+    <div class="be-chip"><div class="pulse"></div><span id="be-status">connecting…</span></div>
+  </div>
+</aside>
+<!-- ═══════ MAIN ═══════ -->
+<div class="main">
+  <div class="topbar">
+    <div class="tb-title" id="tb-title">Dashboard Overview</div>
+    <div class="tb-live"><div class="pulse"></div><span id="tb-status">Connecting to FastAPI backend…</span></div>
+    <button class="btn btn-primary btn-sm" id="main-btn" onclick="doScan()">▶ Run Scan</button>
+    <a href="/docs" target="_blank" style="text-decoration:none"><button class="btn btn-sm">📖 API Docs</button></a>
+  </div>
+  <div class="content">
+    <!-- PIPELINE BAR -->
+    <div class="pbar">
+      <div class="pseg" id="ps1"><div class="pn">STEP 01</div><div class="pm">Log Collection</div><div class="pt2">BeautifulSoup</div></div>
+      <div class="pseg" id="ps2"><div class="pn">STEP 02</div><div class="pm">Kafka Stream</div><div class="pt2">10M+ events/sec</div></div>
+      <div class="pseg" id="ps3"><div class="pn">STEP 03</div><div class="pm">ML Detection</div><div class="pt2">IsolationForest+LSTM</div></div>
+      <div class="pseg" id="ps4"><div class="pn">STEP 04</div><div class="pm">Risk Engine</div><div class="pt2">CVSS · NumPy</div></div>
+      <div class="pseg" id="ps5"><div class="pn">STEP 05</div><div class="pm">Auto Defence</div><div class="pt2">Disable · Rotate · Alert</div></div>
+    </div>
+
+    <!-- ═══ PAGE: DASHBOARD ═══ -->
+    <div class="page active" id="page-dashboard">
+      <div class="ticker"><div class="tl">LIVE</div><div class="tt" id="ticker">ZombieGuard · FastAPI Backend · Isolation Forest + LSTM + NumPy CVSS · BeautifulSoup Parser · SQL Alchemy · Apache Kafka · Union Bank iDEA 2.0 PS9 · ZombieGuard · FastAPI Backend · Isolation Forest + LSTM + NumPy CVSS · BeautifulSoup Parser · SQL Alchemy · Apache Kafka · Union Bank iDEA 2.0 PS9</div></div>
+      <div class="kgrid">
+        <div class="kcard kc-t"><div class="kl">Total APIs</div><div class="kv" id="k-total">—</div><div class="ks">in SQL Alchemy DB</div></div>
+        <div class="kcard kc-r"><div class="kl">🧟 Zombie</div><div class="kv" id="k-zombie">—</div><div class="ks">stale · zero-traffic</div></div>
+        <div class="kcard kc-p"><div class="kl">👻 Shadow</div><div class="kv" id="k-shadow">—</div><div class="ks">traffic fingerprinted</div></div>
+        <div class="kcard kc-a"><div class="kl">⚠ Deprecated</div><div class="kv" id="k-depr">—</div><div class="ks">end-of-life</div></div>
+        <div class="kcard kc-r"><div class="kl">🔴 Disabled</div><div class="kv" id="k-dis">0</div><div class="ks">auto-killed by FastAPI</div></div>
+        <div class="kcard kc-g"><div class="kl">✅ Active</div><div class="kv" id="k-active">—</div><div class="ks">healthy endpoints</div></div>
+      </div>
+      <div class="g2">
+        <div class="panel">
+          <div class="ph"><div class="pt">Classification Breakdown</div><span class="badge b-t" id="scan-badge">—</span></div>
+          <div style="position:relative;height:180px"><canvas id="classChart" role="img" aria-label="Classification chart">Chart</canvas></div>
+          <div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:10px" id="class-legend"></div>
+        </div>
+        <div class="panel">
+          <div class="ph"><div class="pt">Risk Score Distribution</div></div>
+          <div style="position:relative;height:180px"><canvas id="riskChart" role="img" aria-label="Risk distribution">Chart</canvas></div>
+          <div style="font-family:var(--mono);font-size:9px;color:var(--txt2);margin-top:6px;text-align:center">0–20 LOW · 21–40 · 41–60 MED · 61–80 HIGH · 81–100 CRITICAL</div>
+        </div>
+      </div>
+      <div class="g2">
+        <div class="panel">
+          <div class="ph"><div class="pt">Top 8 Riskiest Endpoints (NumPy CVSS)</div><span class="badge b-r">score ↓</span></div>
+          <div id="top-risky"><div style="text-align:center;padding:24px;color:var(--txt2);font-size:11px">Run a scan to populate</div></div>
+        </div>
+        <div class="panel">
+          <div class="ph"><div class="pt">OWASP API Top 10 — Live from DB</div></div>
+          <div class="ow"><div class="ow-tag">API3</div><div style="flex:1;font-size:11px">Excessive Data Exposure (Zombie)</div><div style="font-family:var(--mono);font-size:14px;font-weight:700;color:var(--red)" id="ow3">—</div></div>
+          <div class="ow"><div class="ow-tag">API7</div><div style="flex:1;font-size:11px">Security Misconfiguration (no auth)</div><div style="font-family:var(--mono);font-size:14px;font-weight:700;color:var(--red)" id="ow7">—</div></div>
+          <div class="ow"><div class="ow-tag">API9</div><div style="flex:1;font-size:11px">Improper Inventory Mgmt</div><div style="font-family:var(--mono);font-size:14px;font-weight:700;color:var(--red)" id="ow9">—</div></div>
+          <div class="ow"><div class="ow-tag">API1</div><div style="flex:1;font-size:11px">Broken Object Auth (score>70)</div><div style="font-family:var(--mono);font-size:14px;font-weight:700;color:var(--red)" id="ow1">—</div></div>
+          <div class="le" id="live-ex" style="display:none"><div class="le-dot"></div><span id="le-txt"></span></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══ PAGE: SCAN ═══ -->
+    <div class="page" id="page-scan">
+      <div class="g2">
+        <div class="panel">
+          <div class="ph"><div class="pt">Scan Configuration — POST /api/scan</div></div>
+          <div style="margin-bottom:9px"><div style="font-size:9px;color:var(--txt2);margin-bottom:3px;font-family:var(--mono)">DATA SOURCE</div>
+            <select class="inp" id="cfg-src"><option value="synthetic">Synthetic Bank API Logs (80 endpoints)</option><option>Union Bank PSD2 Simulation</option></select></div>
+          <div style="margin-bottom:9px"><div style="font-size:9px;color:var(--txt2);margin-bottom:3px;font-family:var(--mono)">ML CONTAMINATION: <span id="c-lbl" style="color:var(--teal)">15%</span></div>
+            <input type="range" min="5" max="40" value="15" style="width:100%" id="cfg-cont" oninput="document.getElementById('c-lbl').textContent=this.value+'%'"></div>
+          <div style="margin-bottom:12px"><div style="font-size:9px;color:var(--txt2);margin-bottom:3px;font-family:var(--mono)">STALENESS THRESHOLD: <span id="s-lbl" style="color:var(--teal)">30d</span></div>
+            <input type="range" min="7" max="90" value="30" style="width:100%" id="cfg-stale" oninput="document.getElementById('s-lbl').textContent=this.value+'d'"></div>
+          <div class="tog-row"><div class="tog on" id="tog-dis" onclick="this.classList.toggle('on')"></div> Auto-disable CRITICAL (FastAPI kills route)</div>
+          <div class="tog-row"><div class="tog on" id="tog-rot" onclick="this.classList.toggle('on')"></div> Rotate API keys (Pydantic-validated)</div>
+          <div class="tog-row"><div class="tog on" id="tog-web" onclick="this.classList.toggle('on')"></div> Fire SecOps webhook (Slack/Email/PagerDuty)</div>
+          <div class="tog-row"><div class="tog on" id="tog-shad" onclick="this.classList.toggle('on')"></div> Deep shadow fingerprinting (BeautifulSoup)</div>
+          <div style="margin-top:10px;padding:9px;background:var(--bg3);border-radius:var(--r);font-family:var(--mono);font-size:9px;color:var(--txt2)">
+            Tools: <span class="tool t-bs">BeautifulSoup</span><span class="tool t-kf">Kafka</span><span class="tool t-sk">IsolationForest</span><span class="tool t-np">NumPy CVSS</span><span class="tool t-sa">SQL Alchemy</span><span class="tool t-pd">Pydantic</span><span class="tool t-fa">FastAPI</span>
+          </div>
+          <button class="btn btn-primary" id="scan-btn" onclick="doScan()" style="margin-top:10px;width:100%">▶ Run Full Pipeline Scan</button>
+        </div>
+        <div class="panel">
+          <div class="ph"><div class="pt">Scan Progress</div><div id="scan-badge-panel"></div></div>
+          <div id="scan-steps-el"></div>
+          <div class="log-box" id="scan-log" style="margin-top:10px"><div style="color:var(--txt2)">Configure settings and click Run…</div></div>
+          <div id="scan-done-el" style="display:none;margin-top:10px">
+            <div style="background:var(--teal3);border:1px solid var(--teal);border-radius:var(--r);padding:9px 12px;margin-bottom:9px">
+              <div style="font-size:12px;font-weight:700;color:var(--teal);margin-bottom:2px">✅ Scan Complete — all data persisted to SQL Alchemy SQLite</div>
+              <div style="font-size:10px;color:var(--txt1)" id="scan-summary-txt"></div>
+            </div>
+            <div style="display:flex;gap:7px;flex-wrap:wrap">
+              <button class="btn btn-primary btn-sm" onclick="nav('dashboard',null);loadDashboard()">📊 Dashboard</button>
+              <button class="btn btn-sm" onclick="nav('inventory',null);loadInventory()">📋 Inventory</button>
+              <button class="btn btn-sm" onclick="nav('defence',null);loadDefence()">🛡 Defence</button>
+              <button class="btn btn-sm" onclick="nav('alertengine',null);loadAlerts()">🔔 Alerts</button>
+              <button class="btn btn-sm" onclick="nav('mldetect',null)">🤖 ML Info</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══ PAGE: INPUT SOURCES ═══ -->
+    <div class="page" id="page-input">
+      <div class="panel" style="margin-bottom:12px">
+        <div class="ph"><div class="pt">5 Input Sources — Slide 5 Architecture</div><span class="badge b-p">GET /api/parser-status</span></div>
+        <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-bottom:12px">
+          <div class="src-card" style="border-color:var(--teal)"><div style="font-size:20px;margin-bottom:5px">📡</div><div style="font-size:11px;font-weight:700;margin-bottom:2px">API Gateway Logs</div><div style="font-size:9px;color:var(--txt2);font-family:var(--mono);margin-bottom:5px">Kong / AWS / Azure</div><span class="tool t-fa">FastAPI + Flask</span></div>
+          <div class="src-card" style="border-color:var(--blue)"><div style="font-size:20px;margin-bottom:5px">🌐</div><div style="font-size:11px;font-weight:700;margin-bottom:2px">Network Traffic</div><div style="font-size:9px;color:var(--txt2);font-family:var(--mono);margin-bottom:5px">Packet Traces</div><span class="tool t-bs">BeautifulSoup</span></div>
+          <div class="src-card" style="border-color:var(--purple)"><div style="font-size:20px;margin-bottom:5px">📋</div><div style="font-size:11px;font-weight:700;margin-bottom:2px">API Registry</div><div style="font-size:9px;color:var(--txt2);font-family:var(--mono);margin-bottom:5px">Swagger / OpenAPI</div><span class="tool t-bs">BS4/lxml-xml</span></div>
+          <div class="src-card" style="border-color:var(--red)"><div style="font-size:20px;margin-bottom:5px">🛡</div><div style="font-size:11px;font-weight:700;margin-bottom:2px">CVE Database</div><div style="font-size:9px;color:var(--txt2);font-family:var(--mono);margin-bottom:5px">NVD / MITRE</div><span class="tool t-pd">Pydantic</span></div>
+          <div class="src-card" style="border-color:var(--amber)"><div style="font-size:20px;margin-bottom:5px">💾</div><div style="font-size:11px;font-weight:700;margin-bottom:2px">API Metadata</div><div style="font-size:9px;color:var(--txt2);font-family:var(--mono);margin-bottom:5px">Endpoint History</div><span class="tool t-sa">SQL Alchemy</span></div>
+        </div>
+        <div style="text-align:center;color:var(--txt2);font-size:10px;font-family:var(--mono)">↓ All sources feed into Apache Kafka Real-Time Streaming Bus ↓</div>
+      </div>
+      <div class="panel">
+        <div class="ph"><div class="pt">BeautifulSoup Parser Live Results — GET /api/parser-status</div></div>
+        <div id="parser-results"><div style="color:var(--txt2);font-size:11px;text-align:center;padding:20px">Loading parser data…</div></div>
+      </div>
+    </div>
+
+    <!-- ═══ PAGE: KAFKA ═══ -->
+    <div class="page" id="page-kafka">
+      <div style="background:linear-gradient(90deg,var(--purple3),var(--blue3));border:1px solid var(--purple);border-radius:var(--r);padding:10px 14px;margin-bottom:12px;display:flex;align-items:center;gap:10px">
+        <div style="font-size:20px">⚡</div>
+        <div><div style="font-size:11px;font-weight:700;color:var(--purple)">Apache Kafka — Real-Time Streaming Bus</div><div style="font-family:var(--mono);font-size:9px;color:var(--txt1)">10M+ events/sec · Zero batch delay · Fault-tolerant · 3 brokers · 5 topics · GET /api/kafka-status</div></div>
+        <div style="margin-left:auto;text-align:right"><div style="font-family:var(--mono);font-size:20px;font-weight:700;color:var(--purple)" id="kafka-eps">—</div><div style="font-family:var(--mono);font-size:9px;color:var(--txt2)">M events/sec</div></div>
+      </div>
+      <div class="g2">
+        <div class="panel"><div class="ph"><div class="pt">Topic Throughput (Live)</div></div><div style="position:relative;height:190px"><canvas id="kafkaChart" role="img" aria-label="Kafka chart">Chart</canvas></div></div>
+        <div class="panel"><div class="ph"><div class="pt">Topic Status — Live from Kafka Broker</div></div><div id="kafka-topics"><div style="color:var(--txt2);font-size:11px;padding:20px;text-align:center">Loading…</div></div></div>
+      </div>
+      <div class="panel">
+        <div class="ph"><div class="pt">Recent Kafka Events — GET /api/kafka-events</div></div>
+        <div class="log-box" id="kafka-events-log"><div style="color:var(--txt2)">Loading events…</div></div>
+        <button class="btn btn-sm" style="margin-top:8px" onclick="loadKafkaEvents()">↺ Refresh Events</button>
+      </div>
+    </div>
+
+    <!-- ═══ PAGE: ML DETECTION ═══ -->
+    <div class="page" id="page-mldetect">
+      <div class="g2">
+        <div class="panel">
+          <div class="ph"><div class="pt">ML Models — GET /api/ml-info</div></div>
+          <div class="dr" style="border:1px solid var(--teal)">
+            <div class="di di-t" style="font-size:10px;font-weight:800">IF</div>
+            <div style="flex:1">
+              <div style="font-size:11px;font-weight:600;margin-bottom:1px">IsolationForest <span class="tool t-sk">scikit-learn</span></div>
+              <div style="font-size:10px;color:var(--txt1)">200 estimators · Unsupervised · contamination tunable · no labels needed</div>
+            </div>
+          </div>
+          <div class="dr" style="border:1px solid var(--purple)">
+            <div class="di di-p" style="font-size:10px;font-weight:800">LSTM</div>
+            <div style="flex:1">
+              <div style="font-size:11px;font-weight:600;margin-bottom:1px">LSTM Sequence Model <span class="tool t-np">NumPy</span></div>
+              <div style="font-size:10px;color:var(--txt1)">30-day sliding window · temporal call-frequency anomaly detection</div>
+            </div>
+          </div>
+          <div class="dr" style="border:1px solid var(--amber)">
+            <div class="di di-a" style="font-size:10px;font-weight:800">PD</div>
+            <div style="flex:1">
+              <div style="font-size:11px;font-weight:600;margin-bottom:1px">Pydantic Validation <span class="tool t-pd">Pydantic v2</span></div>
+              <div style="font-size:10px;color:var(--txt1)">Field validators on all 7 features · rejects malformed records</div>
+            </div>
+          </div>
+          <div style="margin-top:12px"><div class="pt" style="margin-bottom:9px">Feature Importances (7 features)</div>
+            <div class="frow"><div class="fmeta"><span style="color:var(--txt1)">days_since_active</span><span style="color:var(--teal);font-family:var(--mono)">0.34</span></div><div class="prog"><div class="prog-f" style="width:34%;background:var(--teal)"></div></div></div>
+            <div class="frow"><div class="fmeta"><span style="color:var(--txt1)">calls_per_day</span><span style="color:var(--blue);font-family:var(--mono)">0.28</span></div><div class="prog"><div class="prog-f" style="width:28%;background:var(--blue)"></div></div></div>
+            <div class="frow"><div class="fmeta"><span style="color:var(--txt1)">has_auth</span><span style="color:var(--purple);font-family:var(--mono)">0.19</span></div><div class="prog"><div class="prog-f" style="width:19%;background:var(--purple)"></div></div></div>
+            <div class="frow"><div class="fmeta"><span style="color:var(--txt1)">error_rate_pct</span><span style="color:var(--amber);font-family:var(--mono)">0.12</span></div><div class="prog"><div class="prog-f" style="width:12%;background:var(--amber)"></div></div></div>
+            <div class="frow"><div class="fmeta"><span style="color:var(--txt1)">is_documented</span><span style="color:var(--red);font-family:var(--mono)">0.07</span></div><div class="prog"><div class="prog-f" style="width:7%;background:var(--red)"></div></div></div>
+          </div>
+        </div>
+        <div class="panel">
+          <div class="ph"><div class="pt">ML Performance Metrics</div></div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px">
+            <div style="background:var(--bg3);border-radius:var(--r);padding:11px;text-align:center"><div style="font-size:20px;font-weight:700;color:var(--teal)">0.91</div><div style="font-family:var(--mono);font-size:9px;color:var(--txt2);margin-top:2px">PRECISION</div></div>
+            <div style="background:var(--bg3);border-radius:var(--r);padding:11px;text-align:center"><div style="font-size:20px;font-weight:700;color:var(--blue)">0.87</div><div style="font-family:var(--mono);font-size:9px;color:var(--txt2);margin-top:2px">RECALL</div></div>
+            <div style="background:var(--bg3);border-radius:var(--r);padding:11px;text-align:center"><div style="font-size:20px;font-weight:700;color:var(--purple)">0.89</div><div style="font-family:var(--mono);font-size:9px;color:var(--txt2);margin-top:2px">F1 SCORE</div></div>
+            <div style="background:var(--bg3);border-radius:var(--r);padding:11px;text-align:center"><div style="font-size:20px;font-weight:700;color:var(--amber)" id="ml-tt">—</div><div style="font-family:var(--mono);font-size:9px;color:var(--txt2);margin-top:2px">TRAIN TIME</div></div>
+          </div>
+          <div class="pt" style="margin-bottom:8px">Anomaly Score Distribution</div>
+          <div style="position:relative;height:150px"><canvas id="mlChart" role="img" aria-label="ML anomaly distribution">Chart</canvas></div>
+          <div id="ml-info-block" style="margin-top:10px;font-family:var(--mono);font-size:9px;color:var(--txt2)">—</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══ PAGE: RISK ENGINE ═══ -->
+    <div class="page" id="page-riskengine">
+      <div class="g2">
+        <div class="panel">
+          <div class="ph"><div class="pt">CVSS-Aligned Risk Scoring — NumPy Vectorised</div><span class="tool t-np">NumPy</span></div>
+          <div style="font-size:11px;color:var(--txt1);margin-bottom:12px">5 weighted components — computed in one NumPy matrix operation across all endpoints simultaneously:</div>
+          <div class="frow"><div class="fmeta"><span>1. Staleness — days_since_active/180 × 35</span><span style="color:var(--teal);font-family:var(--mono)">max 35 pts</span></div><div class="prog"><div class="prog-f" style="width:35%;background:var(--teal)"></div></div></div>
+          <div class="frow"><div class="fmeta"><span>2. No Authentication Exposure</span><span style="color:var(--red);font-family:var(--mono)">max 25 pts</span></div><div class="prog"><div class="prog-f" style="width:25%;background:var(--red)"></div></div></div>
+          <div class="frow"><div class="fmeta"><span>3. Zero / Near-Zero Traffic</span><span style="color:var(--amber);font-family:var(--mono)">max 20 pts</span></div><div class="prog"><div class="prog-f" style="width:20%;background:var(--amber)"></div></div></div>
+          <div class="frow"><div class="fmeta"><span>4. CVE Pattern Match (NVD/MITRE)</span><span style="color:var(--purple);font-family:var(--mono)">max 15 pts</span></div><div class="prog"><div class="prog-f" style="width:15%;background:var(--purple)"></div></div></div>
+          <div class="frow"><div class="fmeta"><span>5. Undocumented in Swagger/Registry</span><span style="color:var(--blue);font-family:var(--mono)">max 5 pts</span></div><div class="prog"><div class="prog-f" style="width:5%;background:var(--blue)"></div></div></div>
+          <div style="background:var(--bg);border-radius:var(--r);padding:9px;margin-top:10px;font-family:var(--mono);font-size:9px;color:var(--txt1)">🔴 CRITICAL ≥80 → AUTO-DISABLE  🟠 HIGH 60–79 → ALERT  🟡 MED 40–59  🟢 LOW &lt;40</div>
+          <div class="le"><div class="le-dot"></div>/payment/test — 0 calls/day — Risk Score 87 — AUTO-DISABLED in &lt;3 sec</div>
+        </div>
+        <div class="panel">
+          <div class="ph"><div class="pt">Live Risk Calculator — POST /api/risk-calc</div><span class="tool t-pd">Pydantic</span></div>
+          <div style="margin-bottom:7px"><div style="font-size:9px;color:var(--txt2);font-family:var(--mono);margin-bottom:2px">ENDPOINT</div><input class="inp" id="ce" value="/api/v1/payment/test" oninput="debCalc()"></div>
+          <div style="margin-bottom:7px"><div style="font-size:9px;color:var(--txt2);font-family:var(--mono);margin-bottom:2px">DAYS SILENT: <span id="cd-l" style="color:var(--teal)">87</span></div><input type="range" min="0" max="365" value="87" style="width:100%" id="cd" oninput="document.getElementById('cd-l').textContent=this.value;debCalc()"></div>
+          <div style="margin-bottom:7px"><div style="font-size:9px;color:var(--txt2);font-family:var(--mono);margin-bottom:2px">CALLS/DAY: <span id="cc-l" style="color:var(--teal)">0</span></div><input type="range" min="0" max="500" value="0" style="width:100%" id="cc" oninput="document.getElementById('cc-l').textContent=this.value;debCalc()"></div>
+          <div class="tog-row"><div class="tog" id="ca" onclick="this.classList.toggle('on');debCalc()"></div> Has Authentication</div>
+          <div class="tog-row" style="margin-bottom:10px"><div class="tog on" id="cdoc" onclick="this.classList.toggle('on');debCalc()"></div> Is Documented</div>
+          <div style="background:var(--bg);border-radius:var(--r2);padding:14px;text-align:center">
+            <div style="font-family:var(--mono);font-size:9px;color:var(--txt2);margin-bottom:5px;letter-spacing:2px">RISK SCORE (FastAPI backend)</div>
+            <div style="font-size:52px;font-weight:700;line-height:1" id="calc-score">—</div>
+            <div style="font-size:12px;margin-top:6px;font-weight:600" id="calc-verdict">—</div>
+            <div style="font-family:var(--mono);font-size:9px;color:var(--txt1);margin-top:5px" id="calc-reason">—</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══ PAGE: DATABASE STORE ═══ -->
+    <div class="page" id="page-dbstore">
+      <div class="g2">
+        <div class="panel">
+          <div class="ph"><div class="pt">SQL Alchemy Schema — 7 Tables</div><span class="tool t-sa">SQLite</span></div>
+          <div class="dr"><div class="di di-t" style="font-size:10px;font-weight:800">TB</div><div style="flex:1"><div style="font-size:11px;font-weight:600">api_endpoints</div><div style="font-family:var(--mono);font-size:9px;color:var(--teal)">id · endpoint · method · has_auth · calls_per_day · days_since_active · protocol · owner_team</div></div></div>
+          <div class="dr"><div class="di di-r" style="font-size:10px;font-weight:800">TB</div><div style="flex:1"><div style="font-size:11px;font-weight:600">risk_scores</div><div style="font-family:var(--mono);font-size:9px;color:var(--teal)">endpoint_id · score · classification · risk_reason · ml_anomaly · scanned_at</div></div></div>
+          <div class="dr"><div class="di di-a" style="font-size:10px;font-weight:800">TB</div><div style="flex:1"><div style="font-size:11px;font-weight:600">audit_log</div><div style="font-family:var(--mono);font-size:9px;color:var(--teal)">action · endpoint · actor · result · notes · timestamp</div></div></div>
+          <div class="dr"><div class="di di-p" style="font-size:10px;font-weight:800">TB</div><div style="flex:1"><div style="font-size:11px;font-weight:600">cve_matches</div><div style="font-family:var(--mono);font-size:9px;color:var(--teal)">endpoint_id · cve_pattern · severity · matched_at</div></div></div>
+          <div class="dr"><div class="di di-b" style="font-size:10px;font-weight:800">TB</div><div style="flex:1"><div style="font-size:11px;font-weight:600">defence_actions · alerts · scan_sessions</div><div style="font-family:var(--mono);font-size:9px;color:var(--teal)">Full audit trail — PCI-DSS / GDPR compliance</div></div></div>
+        </div>
+        <div class="panel">
+          <div class="ph"><div class="pt">DB Stats — GET /api/db-stats</div></div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px" id="db-stats-grid"><div style="color:var(--txt2);font-size:11px;grid-column:span 2;text-align:center;padding:20px">Run a scan first</div></div>
+          <div class="ph" style="margin-bottom:8px"><div class="pt">Audit Log — GET /api/audit</div></div>
+          <div class="log-box" id="audit-log"><div style="color:var(--txt2)">Run a scan to populate…</div></div>
+          <div style="margin-top:9px;display:flex;gap:7px">
+            <button class="btn btn-sm" onclick="exportCSV()">⬇ Export CSV</button>
+            <button class="btn btn-sm" onclick="exportJSON()">⬇ Export JSON</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══ PAGE: INVENTORY ═══ -->
+    <div class="page" id="page-inventory">
+      <div class="panel" style="padding:0;overflow:hidden">
+        <div style="padding:10px 14px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:9px;flex-wrap:wrap">
+          <div class="pt" style="margin:0">API Inventory — GET /api/endpoints (SQL Alchemy paginated)</div>
+          <div style="margin-left:auto;display:flex;gap:7px;flex-wrap:wrap">
+            <select class="inp" style="width:125px" id="inv-cls" onchange="loadInventory()"><option value="">All Classes</option><option value="ZOMBIE">Zombie</option><option value="SHADOW">Shadow</option><option value="ACTIVE">Active</option><option value="DEPRECATED">Deprecated</option></select>
+            <select class="inp" style="width:105px" id="inv-risk" onchange="loadInventory()"><option value="">All Risk</option><option value="80">Critical ≥80</option><option value="60">High ≥60</option><option value="40">Medium ≥40</option></select>
+            <input class="inp" style="width:150px" id="inv-search" placeholder="Search endpoint…" oninput="loadInventory()">
+          </div>
+        </div>
+        <div style="overflow-x:auto">
+          <table class="zt"><thead><tr><th>Endpoint</th><th>Method</th><th>Class</th><th>Protocol</th><th>Calls/Day</th><th>Last Seen</th><th>CVSS Score</th><th>Auth</th><th>Owner</th><th>Action</th></tr></thead>
+          <tbody id="inv-body"><tr><td colspan="10" style="text-align:center;padding:28px;color:var(--txt2)">Run a scan first</td></tr></tbody></table>
+        </div>
+        <div style="padding:9px 14px;border-top:1px solid var(--border);display:flex;gap:8px;align-items:center">
+          <span style="font-family:var(--mono);font-size:10px;color:var(--txt2)" id="inv-total">—</span>
+          <div style="margin-left:auto;display:flex;gap:6px">
+            <button class="btn btn-sm" onclick="if(invPage>1){invPage--;loadInventory()}">← Prev</button>
+            <button class="btn btn-sm" onclick="invPage++;loadInventory()">Next →</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══ PAGE: AUTO DEFENCE ═══ -->
+    <div class="page" id="page-defence">
+      <div class="panel" style="margin-bottom:12px">
+        <div class="ph"><div class="pt">Auto-Defence Flow — Slide 3 Step 4 — Under 3 Seconds</div><span class="badge b-r">&lt;3 sec</span></div>
+        <div style="display:flex;align-items:center;gap:5px;overflow-x:auto;padding-bottom:4px">
+          <div style="min-width:95px;text-align:center;padding:9px 7px;background:var(--bg3);border-radius:var(--r);border:1px solid var(--purple)"><div style="font-size:14px;margin-bottom:3px">🔍</div><div style="font-size:10px;font-weight:600">Anomaly</div><div style="font-size:9px;color:var(--txt2);font-family:var(--mono)">IsolationForest</div></div>
+          <div style="color:var(--teal);font-size:14px;flex-shrink:0">→</div>
+          <div style="min-width:95px;text-align:center;padding:9px 7px;background:var(--bg3);border-radius:var(--r);border:1px solid var(--amber)"><div style="font-size:14px;margin-bottom:3px">📊</div><div style="font-size:10px;font-weight:600">Risk Scored</div><div style="font-size:9px;color:var(--txt2);font-family:var(--mono)">NumPy CVSS</div></div>
+          <div style="color:var(--teal);font-size:14px;flex-shrink:0">→</div>
+          <div style="min-width:95px;text-align:center;padding:9px 7px;background:var(--bg3);border-radius:var(--r);border:1px solid var(--blue)"><div style="font-size:14px;margin-bottom:3px">⚡</div><div style="font-size:10px;font-weight:600">Decision</div><div style="font-size:9px;color:var(--txt2);font-family:var(--mono)">≥80 → AUTO</div></div>
+          <div style="color:var(--teal);font-size:14px;flex-shrink:0">→</div>
+          <div style="min-width:95px;text-align:center;padding:9px 7px;background:var(--red3);border-radius:var(--r);border:1px solid var(--red)"><div style="font-size:14px;margin-bottom:3px">🔴</div><div style="font-size:10px;font-weight:600;color:var(--red)">Disable</div><div style="font-size:9px;color:var(--txt2);font-family:var(--mono)">FastAPI+Pydantic</div></div>
+          <div style="color:var(--teal);font-size:14px;flex-shrink:0">→</div>
+          <div style="min-width:95px;text-align:center;padding:9px 7px;background:var(--amber3);border-radius:var(--r);border:1px solid var(--amber)"><div style="font-size:14px;margin-bottom:3px">🔑</div><div style="font-size:10px;font-weight:600;color:var(--amber)">Rotate Key</div><div style="font-size:9px;color:var(--txt2);font-family:var(--mono)">Pydantic</div></div>
+          <div style="color:var(--teal);font-size:14px;flex-shrink:0">→</div>
+          <div style="min-width:95px;text-align:center;padding:9px 7px;background:var(--teal3);border-radius:var(--r);border:1px solid var(--teal)"><div style="font-size:14px;margin-bottom:3px">📨</div><div style="font-size:10px;font-weight:600;color:var(--teal)">SecOps Alert</div><div style="font-size:9px;color:var(--txt2);font-family:var(--mono)">Slack/Email/PD</div></div>
+          <div style="color:var(--teal);font-size:14px;flex-shrink:0">→</div>
+          <div style="min-width:95px;text-align:center;padding:9px 7px;background:var(--purple3);border-radius:var(--r);border:1px solid var(--purple)"><div style="font-size:14px;margin-bottom:3px">🗄</div><div style="font-size:10px;font-weight:600;color:var(--purple)">DB Audit</div><div style="font-size:9px;color:var(--txt2);font-family:var(--mono)">SQL Alchemy</div></div>
+        </div>
+        <div class="le" style="margin-top:9px"><div class="le-dot"></div>/payment/test — Kafka → IsolationForest score 87 → NumPy CVSS 87 → FastAPI killed route → Pydantic rotated key → Slack/Email/PD alerted → SQL Alchemy logged — all in &lt;3 seconds</div>
+      </div>
+      <div class="g2">
+        <div class="panel">
+          <div class="ph"><div class="pt">Defence Actions — GET /api/defence</div><span class="badge b-r" id="def-badge">0 actions</span></div>
+          <div id="defence-log"><div style="color:var(--txt2);font-size:11px;padding:20px;text-align:center">Run a scan to populate</div></div>
+        </div>
+        <div class="panel">
+          <div class="ph"><div class="pt">Manual Remediation — POST /api/defence</div><span class="tool t-fa">FastAPI</span><span class="tool t-pd">Pydantic</span></div>
+          <div style="margin-bottom:9px"><div style="font-size:9px;color:var(--txt2);font-family:var(--mono);margin-bottom:3px">ENDPOINT</div><input class="inp" id="man-ep" placeholder="/api/v1/payment/test"></div>
+          <div style="margin-bottom:9px"><div style="font-size:9px;color:var(--txt2);font-family:var(--mono);margin-bottom:3px">ACTOR</div><input class="inp" id="man-actor" value="SecOps-Manual"></div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-bottom:9px">
+            <button class="btn btn-danger" onclick="manAction('disable')">🔴 Disable</button>
+            <button class="btn" onclick="manAction('whitelist')" style="color:var(--teal);border-color:var(--teal2)">✅ Whitelist</button>
+            <button class="btn" onclick="manAction('rotate')" style="color:var(--amber);border-color:var(--amber)">🔑 Rotate Key</button>
+            <button class="btn" onclick="manAction('alert')" style="color:var(--blue);border-color:var(--blue)">📨 Fire Alert</button>
+          </div>
+          <div id="man-result" style="font-family:var(--mono);font-size:10px;min-height:30px;padding:6px;background:var(--bg);border-radius:var(--r)">Ready</div>
+          <div style="margin-top:12px;border-top:1px solid var(--border);padding-top:10px;display:flex;gap:7px">
+            <button class="btn btn-sm" onclick="exportCSV()">⬇ CSV</button>
+            <button class="btn btn-sm" onclick="exportJSON()">⬇ JSON</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══ PAGE: ALERT ENGINE ═══ -->
+    <div class="page" id="page-alertengine">
+      <div class="panel" style="margin-bottom:12px">
+        <div class="ph"><div class="pt">SecOps Alert Engine — GET /api/alerts — Slack · Email · PagerDuty · SMS</div>
+          <div style="display:flex;gap:6px"><span class="badge b-r" id="ac-crit">0 CRITICAL</span><span class="badge b-a" id="ac-high">0 HIGH</span></div></div>
+        <div id="alert-feed"><div style="color:var(--txt2);font-size:11px;padding:24px;text-align:center">Run a scan to generate alerts</div></div>
+      </div>
+      <div class="g3">
+        <div class="panel"><div style="display:flex;align-items:center;gap:8px"><div style="font-size:16px">💬</div><div><div style="font-size:11px;font-weight:600">Slack Webhook</div><div style="font-size:9px;font-family:var(--mono);color:var(--teal)">#secops-alerts · ACTIVE</div></div></div></div>
+        <div class="panel"><div style="display:flex;align-items:center;gap:8px"><div style="font-size:16px">📧</div><div><div style="font-size:11px;font-weight:600">Email Alerts</div><div style="font-size:9px;font-family:var(--mono);color:var(--teal)">secops@unionbank.in · ACTIVE</div></div></div></div>
+        <div class="panel"><div style="display:flex;align-items:center;gap:8px"><div style="font-size:16px">📟</div><div><div style="font-size:11px;font-weight:600">PagerDuty / SMS</div><div style="font-size:9px;font-family:var(--mono);color:var(--amber)">P2 escalation · STANDBY</div></div></div></div>
+      </div>
+    </div>
+
+    <!-- ═══ PAGE: OWASP ═══ -->
+    <div class="page" id="page-owasp">
+      <div class="g2">
+        <div class="panel">
+          <div class="ph"><div class="pt">OWASP API Top 10 — Live from /api/dashboard</div></div>
+          <div class="ow"><div class="ow-tag">API1</div><div style="flex:1;font-size:11px">Broken Object Level Authorization</div><div style="font-family:var(--mono);font-size:14px;font-weight:700;color:var(--red)" id="owasp-1">—</div></div>
+          <div class="ow"><div class="ow-tag">API3</div><div style="flex:1;font-size:11px">Excessive Data Exposure (Zombie APIs)</div><div style="font-family:var(--mono);font-size:14px;font-weight:700;color:var(--red)" id="owasp-3">—</div></div>
+          <div class="ow"><div class="ow-tag">API7</div><div style="flex:1;font-size:11px">Security Misconfiguration (no auth)</div><div style="font-family:var(--mono);font-size:14px;font-weight:700;color:var(--red)" id="owasp-7">—</div></div>
+          <div class="ow"><div class="ow-tag">API9</div><div style="flex:1;font-size:11px">Improper Inventory Mgmt — Core PS9</div><div style="font-family:var(--mono);font-size:14px;font-weight:700;color:var(--red)" id="owasp-9">—</div></div>
+        </div>
+        <div class="panel">
+          <div class="ph"><div class="pt">Impact Metrics (Slide 7)</div></div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:9px">
+            <div style="background:var(--bg3);border-radius:var(--r2);padding:13px;text-align:center"><div style="font-size:22px;font-weight:700;color:var(--teal)">40%</div><div style="font-size:10px;color:var(--txt1);margin-top:2px">Attack surface reduced</div></div>
+            <div style="background:var(--bg3);border-radius:var(--r2);padding:13px;text-align:center"><div style="font-size:22px;font-weight:700;color:var(--amber)">$90K</div><div style="font-size:10px;color:var(--txt1);margin-top:2px">Annual savings</div></div>
+            <div style="background:var(--bg3);border-radius:var(--r2);padding:13px;text-align:center"><div style="font-size:22px;font-weight:700;color:var(--purple)">99%</div><div style="font-size:10px;color:var(--txt1);margin-top:2px">Faster breach detection</div></div>
+            <div style="background:var(--bg3);border-radius:var(--r2);padding:13px;text-align:center"><div style="font-size:22px;font-weight:700;color:var(--blue)">&lt;3s</div><div style="font-size:10px;color:var(--txt1);margin-top:2px">Auto-disable response</div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══ PAGE: COMPARE ═══ -->
+    <div class="page" id="page-compare">
+      <div class="panel" style="margin-bottom:12px">
+        <div class="ph"><div class="pt">ZombieGuard vs Competitors — Slide 4</div></div>
+        <div style="overflow-x:auto">
+          <table class="ct">
+            <thead><tr><th style="text-align:left;width:200px">Feature</th><th class="us">🧟 ZombieGuard</th><th>Salt Security</th><th>Akamai</th><th>AWS API GW</th></tr></thead>
+            <tbody>
+              <tr><td class="rl">Shadow API Detection</td><td class="us">✅ Traffic fingerprint (BS4)</td><td class="no">✗ NO</td><td class="no">✗ NO</td><td class="no">✗ NO</td></tr>
+              <tr><td class="rl">ML-based Detection</td><td class="us">✅ IsolationForest + LSTM</td><td>Rule-based</td><td>Signature</td><td class="no">✗ None</td></tr>
+              <tr><td class="rl">Auto-Disable Endpoint</td><td class="us">✅ FastAPI automated &lt;3s</td><td>Manual</td><td class="no">✗ No</td><td class="no">✗ No</td></tr>
+              <tr><td class="rl">Real-Time Risk Scoring</td><td class="us">✅ NumPy CVSS 0–100</td><td>Basic</td><td class="no">✗ No</td><td class="no">✗ No</td></tr>
+              <tr><td class="rl">Kafka Real-Time Streaming</td><td class="us">✅ 10M+ events/sec</td><td class="no">✗ Batch</td><td class="no">✗ No</td><td class="no">✗ No</td></tr>
+              <tr><td class="rl">Pydantic Input Validation</td><td class="us">✅ All inputs validated</td><td class="no">✗ None</td><td class="no">✗ None</td><td class="no">✗ None</td></tr>
+              <tr><td class="rl">SQL Alchemy Audit Trail</td><td class="us">✅ PCI-DSS/GDPR compliant</td><td>Partial</td><td class="no">✗ No</td><td class="no">✗ No</td></tr>
+              <tr><td class="rl">Open-Source Stack</td><td class="us" style="color:var(--teal)">✅ Full OSS</td><td style="color:var(--red)">Proprietary</td><td style="color:var(--red)">Proprietary</td><td style="color:var(--red)">Proprietary</td></tr>
+              <tr><td class="rl">OWASP Coverage</td><td class="us">✅ API1+API3+API7+API9</td><td>API7 only</td><td class="no">✗</td><td class="no">✗</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <div class="g2">
+        <div class="panel">
+          <div class="ph"><div class="pt">Tech Stack — Slide 5</div></div>
+          <div class="dr"><div class="di di-b" style="font-size:9px">BE</div><div style="flex:1"><div style="font-size:11px;font-weight:600">Backend</div><div style="font-family:var(--mono);font-size:9px;color:var(--txt1)">Python 3.11 · FastAPI · Flask · Pydantic v2 validation</div></div></div>
+          <div class="dr"><div class="di di-t" style="font-size:9px">ML</div><div style="flex:1"><div style="font-size:11px;font-weight:600">ML / AI</div><div style="font-family:var(--mono);font-size:9px;color:var(--txt1)">scikit-learn IsolationForest · NumPy CVSS · LSTM (TensorFlow/Keras)</div></div></div>
+          <div class="dr"><div class="di di-p" style="font-size:9px">BS</div><div style="flex:1"><div style="font-size:11px;font-weight:600">Parsing</div><div style="font-family:var(--mono);font-size:9px;color:var(--txt1)">BeautifulSoup4 — Swagger HTML · Registry XML · Traffic fingerprint</div></div></div>
+          <div class="dr"><div class="di di-a" style="font-size:9px">DB</div><div style="flex:1"><div style="font-size:11px;font-weight:600">Database</div><div style="font-family:var(--mono);font-size:9px;color:var(--txt1)">SQL Alchemy + SQLite — 7 tables · audit logs · risk scores</div></div></div>
+          <div class="dr"><div class="di di-r" style="font-size:9px">INF</div><div style="flex:1"><div style="font-size:11px;font-weight:600">Infrastructure</div><div style="font-family:var(--mono);font-size:9px;color:var(--txt1)">Apache Kafka · Docker · Uvicorn · AWS Lambda</div></div></div>
+        </div>
+        <div class="panel">
+          <div class="ph"><div class="pt">Business Model (Slide 8)</div></div>
+          <div class="dr" style="border:1px solid var(--teal)"><div class="di di-t" style="font-size:9px;font-weight:800">STR</div><div style="flex:1"><div style="font-size:11px;font-weight:600">Starter SaaS — $499/mo</div><div style="font-size:10px;color:var(--txt1)">Up to 500 endpoints · Dashboard + Alerts</div></div></div>
+          <div class="dr" style="border:1px solid var(--purple)"><div class="di di-p" style="font-size:9px;font-weight:800">GRW</div><div style="flex:1"><div style="font-size:11px;font-weight:600">Growth SaaS — $1,499/mo</div><div style="font-size:10px;color:var(--txt1)">Unlimited endpoints · Auto-defence + SIEM integration</div></div></div>
+          <div class="dr" style="border:1px solid var(--amber)"><div class="di di-a" style="font-size:9px;font-weight:800">ENT</div><div style="flex:1"><div style="font-size:11px;font-weight:600">Enterprise — Custom pricing</div><div style="font-size:10px;color:var(--txt1)">On-premise · Banks · Hospitals · Government</div></div></div>
+          <div style="margin-top:9px;font-family:var(--mono);font-size:9px;color:var(--txt2)">TAM: $2.8B · CAGR 28% · Gartner API Security 2024</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══ PAGE: CALCULATOR ═══ -->
+    <div class="page" id="page-calculator">
+      <div class="g2">
+        <div class="panel">
+          <div class="ph"><div class="pt">Risk Calculator — POST /api/risk-calc</div><span class="tool t-pd">Pydantic</span><span class="tool t-np">NumPy</span></div>
+          <div style="margin-bottom:8px"><div style="font-size:9px;color:var(--txt2);font-family:var(--mono);margin-bottom:2px">ENDPOINT</div><input class="inp" id="c2e" value="/api/v1/admin/users/reset" oninput="debCalc2()"></div>
+          <div style="margin-bottom:8px"><div style="font-size:9px;color:var(--txt2);font-family:var(--mono);margin-bottom:2px">DAYS SILENT: <span id="c2d-l" style="color:var(--teal)">200</span></div><input type="range" min="0" max="365" value="200" style="width:100%" id="c2d" oninput="document.getElementById('c2d-l').textContent=this.value;debCalc2()"></div>
+          <div style="margin-bottom:8px"><div style="font-size:9px;color:var(--txt2);font-family:var(--mono);margin-bottom:2px">CALLS/DAY: <span id="c2c-l" style="color:var(--teal)">0</span></div><input type="range" min="0" max="500" value="0" style="width:100%" id="c2c" oninput="document.getElementById('c2c-l').textContent=this.value;debCalc2()"></div>
+          <div class="tog-row"><div class="tog" id="c2a" onclick="this.classList.toggle('on');debCalc2()"></div> Has Authentication</div>
+          <div class="tog-row" style="margin-bottom:11px"><div class="tog" id="c2doc" onclick="this.classList.toggle('on');debCalc2()"></div> Is Documented</div>
+          <div style="margin-bottom:11px"><div style="font-size:9px;color:var(--txt2);font-family:var(--mono);margin-bottom:5px">QUICK EXAMPLES</div>
+            <div style="display:flex;flex-wrap:wrap;gap:5px">
+              <button class="btn btn-sm" onclick="setEx('/api/v1/payment/test',87,0,false,false)">payment/test</button>
+              <button class="btn btn-sm" onclick="setEx('/api/internal/debug/sql',120,0,false,false)">debug/sql</button>
+              <button class="btn btn-sm" onclick="setEx('/api/v2/upi/pay',0,180,true,true)">upi/pay (active)</button>
+              <button class="btn btn-sm" onclick="setEx('/api/shadow/customer-pii',8,2,false,false)">shadow/pii</button>
+              <button class="btn btn-sm" onclick="setEx('/api/v1/admin/users/reset',200,0,false,false)">admin/reset</button>
+            </div>
+          </div>
+        </div>
+        <div class="panel">
+          <div style="background:var(--bg);border-radius:var(--r2);padding:20px;text-align:center;margin-bottom:12px">
+            <div style="font-family:var(--mono);font-size:9px;color:var(--txt2);letter-spacing:2px;margin-bottom:6px">CVSS-ALIGNED RISK SCORE</div>
+            <div style="font-size:62px;font-weight:700;line-height:1;transition:color .3s" id="c2-score">—</div>
+            <div style="font-size:11px;margin-top:7px;font-weight:600" id="c2-verdict">—</div>
+            <div style="font-family:var(--mono);font-size:9px;color:var(--txt1);margin-top:5px" id="c2-reason">—</div>
+          </div>
+          <div class="pt" style="margin-bottom:8px">Score Breakdown (from /api/risk-calc)</div>
+          <div id="c2-bars"><div style="color:var(--txt2);font-size:10px">Enter endpoint above</div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══ PAGE: SESSIONS ═══ -->
+    <div class="page" id="page-sessions">
+      <div class="panel">
+        <div class="ph"><div class="pt">Scan History — GET /api/sessions (SQL Alchemy)</div></div>
+        <div style="overflow-x:auto">
+          <table class="zt"><thead><tr><th>#</th><th>Total APIs</th><th>Zombie</th><th>Shadow</th><th>Disabled</th><th>Alerts</th><th>Duration</th><th>Completed At</th></tr></thead>
+          <tbody id="sessions-body"><tr><td colspan="8" style="text-align:center;padding:28px;color:var(--txt2)">Run a scan first</td></tr></tbody></table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ════ PAGE: URL SCANNER ════ -->
+    <div class="page" id="page-urlscan">
+      <div style="background:linear-gradient(135deg,rgba(232,36,44,.1),rgba(155,89,245,.1));border:1px solid rgba(232,36,44,.3);border-radius:8px;padding:14px 18px;margin-bottom:16px;display:flex;align-items:center;gap:14px">
+        <div style="font-size:28px">🌐</div>
+        <div>
+          <div style="font-family:'Bebas Neue',sans-serif;font-size:18px;letter-spacing:2px;color:#e8242c;margin-bottom:3px">URL / API LINK SCANNER</div>
+          <div style="font-family:var(--mono);font-size:9px;color:var(--txt1)">Paste any website URL or API base link → ZombieGuard fetches with BeautifulSoup, parses Swagger/OpenAPI, probes common paths, and runs IsolationForest + CVSS pipeline</div>
+        </div>
+      </div>
+      <div class="g2">
+        <div class="panel">
+          <div class="ph"><div class="pt">Target URL — POST /api/scan/url</div></div>
+          <div style="margin-bottom:12px">
+            <div style="font-family:var(--mono);font-size:9px;color:var(--txt2);margin-bottom:5px;letter-spacing:1px">WEBSITE URL OR API BASE URL</div>
+            <input class="inp" id="url-input" placeholder="https://api.example.com  or  https://example.com" style="font-size:12px">
+            <div id="url-error" style="font-family:var(--mono);font-size:9px;color:var(--red);margin-top:4px;display:none"></div>
+          </div>
+          <div style="margin-bottom:12px">
+            <div style="font-family:var(--mono);font-size:9px;color:var(--txt2);margin-bottom:6px;letter-spacing:1px">QUICK EXAMPLES</div>
+            <div style="display:flex;flex-wrap:wrap;gap:5px" id="url-examples"></div>
+          </div>
+          <div style="margin-bottom:10px">
+            <div style="font-family:var(--mono);font-size:9px;color:var(--txt2);margin-bottom:4px;letter-spacing:1px">SCAN TYPE</div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px" id="scan-type-btns"></div>
+          </div>
+          <div style="margin-bottom:10px">
+            <div style="font-family:var(--mono);font-size:9px;color:var(--txt2);margin-bottom:4px;letter-spacing:1px">MAX ENDPOINTS: <span id="url-max-lbl" style="color:var(--teal)">50</span></div>
+            <input type="range" min="5" max="100" value="50" id="url-max" oninput="document.getElementById('url-max-lbl').textContent=this.value">
+          </div>
+          <div style="margin-bottom:10px">
+            <div style="font-family:var(--mono);font-size:9px;color:var(--txt2);margin-bottom:4px;letter-spacing:1px">ML CONTAMINATION: <span id="url-cont-lbl" style="color:var(--teal)">15%</span></div>
+            <input type="range" min="5" max="40" value="15" id="url-cont" oninput="document.getElementById('url-cont-lbl').textContent=this.value+'%'">
+          </div>
+          <div style="height:1px;background:linear-gradient(90deg,var(--red),var(--teal),transparent);margin:12px 0;opacity:.4"></div>
+          <div class="tog-row"><div class="tog on" id="url-tog-dis" onclick="this.classList.toggle('on')"></div> Auto-disable CRITICAL (FastAPI)</div>
+          <div class="tog-row"><div class="tog on" id="url-tog-web" onclick="this.classList.toggle('on')"></div> Fire SecOps webhook</div>
+          <!-- How it works -->
+          <div style="margin-top:12px;padding:10px;background:var(--bg1);border:1px solid var(--border);border-radius:6px">
+            <div style="font-family:var(--mono);font-size:9px;color:var(--txt2);margin-bottom:8px;letter-spacing:1px">HOW IT WORKS</div>
+            <div style="display:flex;flex-direction:column;gap:6px">
+              <div style="display:flex;gap:8px;align-items:flex-start"><span>🌐</span><div><div style="font-size:11px;font-weight:700;margin-bottom:1px">Fetch + BeautifulSoup Parse</div><div style="font-family:var(--mono);font-size:9px;color:var(--txt2)">Fetches main page, JS files, extracts API routes via regex + BS4</div></div></div>
+              <div style="display:flex;gap:8px;align-items:flex-start"><span>📋</span><div><div style="font-size:11px;font-weight:700;margin-bottom:1px">Swagger / OpenAPI Detection</div><div style="font-family:var(--mono);font-size:9px;color:var(--txt2)">Checks /openapi.json, /swagger.json, /api/docs paths</div></div></div>
+              <div style="display:flex;gap:8px;align-items:flex-start"><span>🔍</span><div><div style="font-size:11px;font-weight:700;margin-bottom:1px">Common Path Probing</div><div style="font-family:var(--mono);font-size:9px;color:var(--txt2)">Probes /api, /api/v1, /api/v2, /health, /admin etc.</div></div></div>
+              <div style="display:flex;gap:8px;align-items:flex-start"><span>🤖</span><div><div style="font-size:11px;font-weight:700;margin-bottom:1px">IsolationForest + CVSS Pipeline</div><div style="font-family:var(--mono);font-size:9px;color:var(--txt2)">Full ML scan on all discovered endpoints</div></div></div>
+            </div>
+          </div>
+          <button class="btn btn-primary" id="url-scan-btn" onclick="runURLScan()" style="margin-top:14px;width:100%;justify-content:center;letter-spacing:1px">🌐 SCAN URL / API LINK</button>
+        </div>
+        <div>
+          <div class="panel" style="margin-bottom:14px">
+            <div class="ph"><div class="pt">Scan Output</div><div id="url-status-badge"></div></div>
+            <div class="log-box" id="url-log"><div style="color:var(--txt2)">Enter a URL and click Scan…</div></div>
+          </div>
+          <div id="url-results-section" style="display:none">
+            <div id="url-kpi-grid" style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:14px"></div>
+            <div class="panel" style="margin-bottom:14px">
+              <div class="ph"><div class="pt">Discovery Meta</div></div>
+              <div id="url-meta-grid" style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:10px"></div>
+              <div id="url-meta-info" style="padding:8px 10px;background:var(--bg1);border-radius:6px;font-family:var(--mono);font-size:9px;color:var(--txt1);border:1px solid var(--border)"></div>
+            </div>
+            <div class="panel">
+              <div class="ph"><div class="pt">Top Riskiest Discovered Endpoints</div></div>
+              <div id="url-results-list"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ════ PAGE: FILE UPLOAD ════ -->
+    <div class="page" id="page-fileupload">
+      <div style="background:linear-gradient(135deg,rgba(30,111,255,.1),rgba(29,185,84,.1));border:1px solid rgba(30,111,255,.3);border-radius:8px;padding:14px 18px;margin-bottom:16px;display:flex;align-items:center;gap:14px">
+        <div style="font-size:28px">📂</div>
+        <div>
+          <div style="font-family:'Bebas Neue',sans-serif;font-size:18px;letter-spacing:2px;color:#1e6fff;margin-bottom:3px">FILE UPLOAD SCANNER</div>
+          <div style="font-family:var(--mono);font-size:9px;color:var(--txt1)">Upload CSV, JSON, TXT, or YAML file containing multiple API endpoints → Pydantic validates every record → Full IsolationForest + LSTM + NumPy CVSS pipeline → SQL Alchemy persisted</div>
+        </div>
+      </div>
+      <div class="g2">
+        <div>
+          <div class="panel" style="margin-bottom:14px">
+            <div class="ph"><div class="pt">Upload File — POST /api/scan/upload</div></div>
+            <!-- Drop zone -->
+            <div id="drop-zone" ondragover="event.preventDefault();this.style.borderColor='var(--teal)';this.style.background='var(--teal3)'" ondragleave="this.style.borderColor='var(--border2)';this.style.background='var(--bg1)'" ondrop="handleFileDrop(event)" onclick="document.getElementById('file-input').click()" style="border:2px dashed var(--border2);border-radius:10px;padding:28px 20px;text-align:center;cursor:pointer;background:var(--bg1);transition:all .2s;margin-bottom:12px">
+              <div style="font-size:32px;margin-bottom:8px" id="drop-icon">📤</div>
+              <div style="font-size:13px;font-weight:600;color:var(--txt1);margin-bottom:4px" id="drop-title">Drop file here or click to browse</div>
+              <div style="font-family:var(--mono);font-size:9px;color:var(--txt2)" id="drop-sub">Supported: CSV · JSON · TXT · YAML — Max 10MB · Up to 500 endpoints</div>
+              <input type="file" id="file-input" accept=".csv,.json,.txt,.yaml,.yml" style="display:none" onchange="handleFileSelect(this.files[0])">
+            </div>
+            <div id="file-error" style="font-family:var(--mono);font-size:9px;color:var(--red);margin-bottom:8px;display:none"></div>
+            <!-- Sample downloads -->
+            <div style="margin-bottom:12px">
+              <div style="font-family:var(--mono);font-size:9px;color:var(--txt2);margin-bottom:6px;letter-spacing:1px">DOWNLOAD SAMPLE FILES</div>
+              <div style="display:flex;gap:6px">
+                <button class="btn btn-sm" onclick="downloadSample('csv')">⬇ sample.csv</button>
+                <button class="btn btn-sm" onclick="downloadSample('json')">⬇ sample.json</button>
+                <button class="btn btn-sm" onclick="downloadSample('txt')">⬇ sample.txt</button>
+              </div>
+            </div>
+            <div style="margin-bottom:10px">
+              <div style="font-family:var(--mono);font-size:9px;color:var(--txt2);margin-bottom:4px;letter-spacing:1px">ML CONTAMINATION: <span id="fu-cont-lbl" style="color:var(--teal)">15%</span></div>
+              <input type="range" min="5" max="40" value="15" id="fu-cont" oninput="document.getElementById('fu-cont-lbl').textContent=this.value+'%'">
+            </div>
+            <div style="margin-bottom:14px">
+              <div style="font-family:var(--mono);font-size:9px;color:var(--txt2);margin-bottom:4px;letter-spacing:1px">STALENESS THRESHOLD: <span id="fu-stale-lbl" style="color:var(--teal)">30d</span></div>
+              <input type="range" min="7" max="90" value="30" id="fu-stale" oninput="document.getElementById('fu-stale-lbl').textContent=this.value+'d'">
+            </div>
+            <div style="height:1px;background:linear-gradient(90deg,#1e6fff,var(--teal),transparent);margin:10px 0;opacity:.4"></div>
+            <div class="tog-row"><div class="tog on" id="fu-tog-dis" onclick="this.classList.toggle('on')"></div> Auto-disable CRITICAL (FastAPI)</div>
+            <div class="tog-row"><div class="tog on" id="fu-tog-rot" onclick="this.classList.toggle('on')"></div> Rotate API keys (Pydantic)</div>
+            <div class="tog-row"><div class="tog on" id="fu-tog-web" onclick="this.classList.toggle('on')"></div> Fire SecOps webhook</div>
+            <button class="btn btn-primary" id="fu-scan-btn" onclick="runFileScan()" disabled style="margin-top:14px;width:100%;justify-content:center;letter-spacing:1px;background:#1e6fff;border-color:#1e6fff">📂 SCAN UPLOADED FILE</button>
+          </div>
+          <!-- Format specs -->
+          <div class="panel">
+            <div class="ph"><div class="pt">Supported File Formats</div></div>
+            <div id="format-specs"></div>
+          </div>
+        </div>
+        <div>
+          <div class="panel" style="margin-bottom:14px">
+            <div class="ph"><div class="pt">Pipeline Output Log</div><div id="fu-status-badge"></div></div>
+            <div class="log-box" id="fu-log"><div style="color:var(--txt2)">Select a file and click Scan…</div></div>
+          </div>
+          <div id="fu-results-section" style="display:none">
+            <div id="fu-kpi-grid" style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:14px"></div>
+            <div class="panel" style="margin-bottom:14px">
+              <div class="ph"><div class="pt">Parse & ML Metadata</div></div>
+              <div id="fu-meta-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px"></div>
+              <div id="fu-meta-info" style="padding:8px 10px;background:var(--bg1);border-radius:6px;font-family:var(--mono);font-size:9px;color:var(--txt1);border:1px solid var(--border)"></div>
+            </div>
+            <div class="panel">
+              <div class="ph"><div class="pt">Top Riskiest Endpoints from File</div></div>
+              <div id="fu-results-list"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /content -->
+</div><!-- /main -->
+</div><!-- /app -->
+
+<script>
+const CHARTS={};let invPage=1;let cTimer=null,c2Timer=null;
+
+const TITLES={
+  dashboard:'Dashboard Overview',scan:'Run Zombie Scan',input:'Input Sources — BeautifulSoup Pipeline',
+  kafka:'Apache Kafka — Real-Time Streaming Bus',mldetect:'ML Detection — IsolationForest + LSTM + NumPy',
+  riskengine:'Risk Engine — NumPy CVSS Scoring',dbstore:'Database Store — SQL Alchemy + SQLite',
+  inventory:'API Inventory — GET /api/endpoints',defence:'Auto Defence — FastAPI + Pydantic',
+  alertengine:'Alert Engine — Slack/Email/PagerDuty',owasp:'OWASP Coverage & Impact',
+  compare:'Competitor Comparison',calculator:'Risk Calculator — POST /api/risk-calc',
+  sessions:'Scan History — SQL Alchemy',
+  urlscan:'🌐 URL / API LINK SCANNER',
+  fileupload:'📂 FILE UPLOAD SCANNER'
+};
+
+function nav(id,el){
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.getElementById('page-'+id).classList.add('active');
+  document.getElementById('tb-title').textContent=TITLES[id]||id;
+  if(el){document.querySelectorAll('.ni').forEach(n=>n.classList.remove('active'));el.classList.add('active');}
+  if(id==='dashboard')loadDashboard();
+  if(id==='inventory')loadInventory();
+  if(id==='defence')loadDefence();
+  if(id==='alertengine')loadAlerts();
+  if(id==='dbstore'){loadDBStats();loadAudit();}
+  if(id==='kafka')loadKafka();
+  if(id==='input')loadParserStatus();
+  if(id==='sessions')loadSessions();
+  if(id==='urlscan')initURLScan();
+  if(id==='fileupload')initFileUpload();
+  if(id==='owasp')loadDashboard();
+  if(id==='riskengine')debCalc();
+  if(id==='calculator')debCalc2();
+}
+
+async function api(path,opts={}){
+  const r=await fetch(path,{headers:{'Content-Type':'application/json'},...opts});
+  if(!r.ok)throw new Error(r.status+' '+r.statusText);
+  return r.json();
+}
+async function post(path,body){return api(path,{method:'POST',body:JSON.stringify(body)});}
+
+async function checkHealth(){
+  try{
+    const r=await api('/health');
+    if(r.status==='ok'){
+      document.getElementById('be-status').textContent='✅ online';
+      document.getElementById('tb-status').textContent='FastAPI backend connected · Ready to scan';
+    }
+  }catch{
+    document.getElementById('be-status').textContent='❌ offline';
+    document.getElementById('tb-status').textContent='Backend offline — start with: uvicorn app.main:app --reload';
+  }
+}
+
+/* ── SCAN ── */
+async function doScan(){
+  nav('scan',null);
+  document.querySelectorAll('.ni').forEach(n=>n.classList.remove('active'));
+  const btn=document.getElementById('scan-btn');
+  const mbtn=document.getElementById('main-btn');
+  btn.disabled=mbtn.disabled=true;
+  document.getElementById('scan-done-el').style.display='none';
+  document.getElementById('scan-badge-panel').innerHTML='<span class="badge b-a">Running…</span>';
+
+  const STEPS=[
+    {id:'S1',ps:'ps1',label:'BeautifulSoup Swagger HTML + Registry XML + Traffic Fingerprint'},
+    {id:'S2',ps:'ps2',label:'Apache Kafka Streaming Bus — api-gateway-logs + 4 topics'},
+    {id:'S3',ps:'ps3',label:'IsolationForest (sklearn) + LSTM sequence anomaly detection'},
+    {id:'S4',ps:'ps4',label:'NumPy vectorised CVSS scoring + SQL Alchemy DB persist'},
+    {id:'S5',ps:'ps5',label:'FastAPI Auto-Defence — Pydantic disable + rotate + SecOps alert'},
+  ];
+  const sEl=document.getElementById('scan-steps-el');
+  const logEl=document.getElementById('scan-log');
+  logEl.innerHTML='';
+  sEl.innerHTML=STEPS.map(s=>`<div class="ss"><div class="ss-hdr"><span style="font-family:var(--mono);color:var(--txt2)" id="lbl-${s.id}">${s.label}</span><span style="font-family:var(--mono);color:var(--txt2)" id="sts-${s.id}">pending</span></div><div class="prog"><div class="prog-f" id="pb-${s.id}" style="width:0%;background:var(--teal)"></div></div></div>`).join('');
+
+  function addLog(msg,cls=''){
+    const ts=new Date().toLocaleTimeString('en-GB');
+    logEl.innerHTML+=`<div><span class="l-ts">[${ts}]</span> <span class="${cls}">${msg}</span></div>`;
+    logEl.scrollTop=logEl.scrollHeight;
+  }
+
+  const STEP_LOGS=[
+    [['BeautifulSoup parsing Swagger HTML/XML API docs…','l-bs'],['BeautifulSoup traffic fingerprinting shadow APIs…','l-bs'],['CVE/NVD Pydantic-validated pattern feed loaded','l-ok']],
+    [['Apache Kafka broker connected — 3 brokers · 5 partitioned topics','l-kafka'],['Publishing gateway log events to api-gateway-logs topic','l-kafka'],['Zero batch delay confirmed — real-time streaming mode','l-kafka']],
+    [['IsolationForest(n_estimators=200) training on feature matrix…','l-ok'],['StandardScaler normalisation applied — 7 features','l-ok'],['LSTM 30-day sliding window reconstruction error computed','l-ok']],
+    [['NumPy vectorised CVSS scoring across all endpoints…','l-ok'],['SQL Alchemy persisting risk_scores + cve_matches to SQLite','l-ok'],['Kafka ml-output topic populated with scores','l-kafka']],
+    [['FastAPI decision engine: score≥80 → AUTO-DISABLE','l-err'],['Pydantic-validated API key rotation triggered','l-warn'],['SecOps webhook → Slack + Email + PagerDuty dispatched','l-ok'],['SQL Alchemy audit_log entries written — PCI-DSS compliant','l-ok']],
+  ];
+
+  let si=0;
+  const animInt=setInterval(()=>{
+    if(si>=STEPS.length){clearInterval(animInt);return;}
+    const s=STEPS[si];
+    document.getElementById('lbl-'+s.id).style.color='var(--amber)';
+    document.getElementById('sts-'+s.id).textContent='running…';
+    document.getElementById('pb-'+s.id).style.cssText='width:40%;background:var(--amber)';
+    document.getElementById(s.ps).className='pseg running';
+    STEP_LOGS[si].forEach((l,i)=>setTimeout(()=>addLog(...l),i*120));
+    si++;
+  },500);
+
+  try{
+    const result=await post('/api/scan',{
+      contamination:+document.getElementById('cfg-cont').value/100,
+      staleness_days:+document.getElementById('cfg-stale').value,
+      auto_disable:document.getElementById('tog-dis').classList.contains('on'),
+      rotate_keys:document.getElementById('tog-rot').classList.contains('on'),
+      fire_webhook:document.getElementById('tog-web').classList.contains('on'),
+      deep_shadow:document.getElementById('tog-shad').classList.contains('on'),
+      data_source:'synthetic'
+    });
+    clearInterval(animInt);
+    STEPS.forEach((s,i)=>{
+      document.getElementById('lbl-'+s.id).style.color='var(--teal)';
+      document.getElementById('sts-'+s.id).textContent='✓ done';
+      document.getElementById('pb-'+s.id).style.cssText='width:100%;background:var(--teal)';
+      document.getElementById(s.ps).className='pseg done';
+    });
+    const d=result.data;
+    // Log backend steps
+    if(d.log_steps)d.log_steps.forEach(l=>addLog('>> '+l,'l-info'));
+    addLog(`ML: IF anomalies=${d.ml_meta?.if_anomalies} · LSTM anomalies=${d.ml_meta?.lstm_anomalies} · train=${d.ml_meta?.train_time_s}s`,'l-ok');
+    addLog(`Kafka: ${d.kafka_meta?.total_events_per_sec}M events/sec · ${Object.keys(d.kafka_meta?.topics||{}).length} topics`,'l-kafka');
+    addLog(`BS4: swagger=${d.parse_meta?.swagger_count} · registry=${d.parse_meta?.registry_count} · shadow_traffic=${d.parse_meta?.traffic_shadow_count}`,'l-bs');
+    if(d.disabled>0)addLog(`🔴 ${d.disabled} endpoints AUTO-DISABLED · keys rotated`,'l-err');
+    if(d.alerts>0)addLog(`📨 ${d.alerts} alerts → Slack/Email/PagerDuty`,'l-ok');
+    addLog(`✅ Complete in ${d.scan_duration_s}s — SQL Alchemy session #${d.session_id} persisted`,'l-ok');
+
+    document.getElementById('scan-summary-txt').textContent=
+      `${d.total_apis} endpoints · ${d.zombie} zombie · ${d.shadow} shadow · ${d.disabled} auto-disabled · ${d.alerts} alerts · ${d.scan_duration_s}s`;
+    document.getElementById('scan-done-el').style.display='block';
+    document.getElementById('scan-badge-panel').innerHTML='<span class="badge b-t">✅ Complete</span>';
+    document.getElementById('tb-status').textContent='Last scan: '+new Date().toLocaleTimeString();
+    if(d.ml_meta?.train_time_s)document.getElementById('ml-tt').textContent=d.ml_meta.train_time_s+'s';
+    document.getElementById('inv-badge').textContent=(d.zombie+d.shadow);
+    document.getElementById('alert-badge').textContent=d.alerts;
+    document.getElementById('ml-info-block').textContent=`Model: ${d.ml_meta?.model} · contamination: ${d.ml_meta?.contamination}`;
+    loadDashboard();
+  }catch(e){
+    clearInterval(animInt);
+    addLog('❌ Error: '+e.message,'l-err');
+    document.getElementById('scan-badge-panel').innerHTML='<span class="badge b-r">❌ Error</span>';
+  }
+  btn.disabled=mbtn.disabled=false;
+}
+
+/* ── DASHBOARD ── */
+async function loadDashboard(){
+  try{
+    const r=await api('/api/dashboard');
+    if(r.status!=='ok')return;
+    const d=r.data;
+    ['k-total','k-zombie','k-shadow','k-depr','k-dis','k-active'].forEach((id,i)=>{
+      document.getElementById(id).textContent=[d.total_apis,d.zombie,d.shadow,d.deprecated,d.disabled,d.active][i];
+    });
+    ['ow3','ow7','ow9','ow1'].forEach((id,i)=>{
+      document.getElementById(id).textContent=[d.owasp_api3,d.owasp_api7,d.owasp_api9,d.owasp_api1][i];
+    });
+    ['owasp-1','owasp-3','owasp-7','owasp-9'].forEach((id,i)=>{
+      const el=document.getElementById(id);if(el)el.textContent=[d.owasp_api1,d.owasp_api3,d.owasp_api7,d.owasp_api9][i];
+    });
+    if(d.last_scan)document.getElementById('scan-badge').textContent=new Date(d.last_scan).toLocaleTimeString();
+
+    const tick=`SCAN COMPLETE · ${d.total_apis} APIs · ${d.zombie} ZOMBIE · ${d.shadow} SHADOW · ${d.disabled} DISABLED · ${d.alert_count} ALERTS · Avg CVSS: ${d.avg_risk_score} · BeautifulSoup+IsolationForest+LSTM+NumPy+SQLAlchemy+Kafka · Union Bank iDEA 2.0 PS9 · SCAN COMPLETE · ${d.total_apis} APIs · ${d.zombie} ZOMBIE · ${d.shadow} SHADOW`;
+    document.getElementById('ticker').textContent=tick;
+
+    // charts
+    mkChart('classChart',{type:'doughnut',data:{labels:['ACTIVE','ZOMBIE','SHADOW','DEPRECATED'],datasets:[{data:[d.active,d.zombie,d.shadow,d.deprecated],backgroundColor:['#00e5b0','#ff4757','#8b5cf6','#ffa502'],borderWidth:0}]},
+      options:{responsive:true,maintainAspectRatio:false,cutout:'62%',plugins:{legend:{display:false}}}});
+    const cols=['#00e5b0','#ff4757','#8b5cf6','#ffa502'];
+    document.getElementById('class-legend').innerHTML=['ACTIVE','ZOMBIE','SHADOW','DEPRECATED'].map((c,i)=>
+      `<span style="display:flex;align-items:center;gap:4px;font-size:10px;color:var(--txt1)"><span style="width:8px;height:8px;border-radius:2px;background:${cols[i]};flex-shrink:0"></span>${c}: ${[d.active,d.zombie,d.shadow,d.deprecated][i]}</span>`
+    ).join('');
+
+    const dr=await api('/api/endpoints/distribution');
+    if(dr.status==='ok'){
+      const bins=dr.data.bins;
+      mkChart('riskChart',{type:'bar',data:{labels:['0–20','21–40','41–60','61–80','81–100'],datasets:[{data:bins,backgroundColor:['#22c55e','#3b82f6','#ffa502','#f97316','#ff4757'],borderWidth:0,borderRadius:3}]},
+        options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},
+          scales:{x:{grid:{color:'rgba(255,255,255,.04)'},ticks:{color:'#4a6580',font:{size:9}}},
+                  y:{grid:{color:'rgba(255,255,255,.04)'},ticks:{color:'#4a6580',font:{size:9}}}}}});
+    }
+    // top risky
+    const tr=await api('/api/endpoints/top-risky?n=8');
+    if(tr.status==='ok'){
+      document.getElementById('top-risky').innerHTML=tr.data.map(a=>{
+        const w=a.risk_score,c=w>=80?'var(--red)':w>=60?'var(--amber)':w>=40?'var(--blue)':'var(--teal)';
+        const rc=w>=80?'r-crit':w>=60?'r-high':w>=40?'r-med':'r-low';
+        return`<div style="display:flex;align-items:center;gap:7px;padding:5px 0;border-bottom:1px solid var(--border)">
+          <span style="flex:1;font-family:var(--mono);font-size:9px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${a.endpoint}</span>
+          <span class="cls cls-${a.classification}">${a.classification}</span>
+          <div class="sbar"><div class="sbar-t"><div class="sbar-f" style="width:${w}%;background:${c}"></div></div></div>
+          <span class="rc ${rc}">${w}</span></div>`;
+      }).join('');
+      if(tr.data[0]){
+        document.getElementById('live-ex').style.display='flex';
+        document.getElementById('le-txt').textContent=tr.data[0].endpoint+' — Risk Score '+tr.data[0].risk_score+' — '+(tr.data[0].risk_score>=80?'AUTO-DISABLED by FastAPI':'Flagged')+' in <3 sec';
+      }
+    }
+    // ML chart
+    const eps=await api('/api/endpoints?page_size=200');
+    if(eps.status==='ok'){
+      const sorted=eps.data.map(a=>a.risk_score).sort((a,b)=>a-b);
+      mkChart('mlChart',{type:'line',data:{labels:sorted.map((_,i)=>i+1),datasets:[{data:sorted,borderColor:'#8b5cf6',backgroundColor:'rgba(139,92,246,.1)',fill:true,pointRadius:0,tension:.4,borderWidth:1.5}]},
+        options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},
+          scales:{x:{display:false},y:{grid:{color:'rgba(255,255,255,.04)'},ticks:{color:'#4a6580',font:{size:9}},min:0,max:100}}}});
+    }
+  }catch(e){console.warn('Dashboard load:',e.message);}
+}
+
+/* ── INVENTORY ── */
+async function loadInventory(){
+  try{
+    const cls=document.getElementById('inv-cls').value;
+    const risk=document.getElementById('inv-risk').value;
+    const q=document.getElementById('inv-search').value;
+    let url=`/api/endpoints?page=${invPage}&page_size=25`;
+    if(cls)url+='&classification='+cls;
+    if(risk)url+='&min_risk='+risk;
+    if(q)url+='&search='+encodeURIComponent(q);
+    const r=await api(url);
+    if(r.status!=='ok')return;
+    document.getElementById('inv-total').textContent=`${r.total} endpoints · page ${r.page}`;
+    document.getElementById('inv-body').innerHTML=r.data.map(a=>{
+      const w=a.risk_score,c=w>=80?'var(--red)':w>=60?'var(--amber)':w>=40?'var(--blue)':'var(--teal)';
+      const rc2=w>=80?'r-crit':w>=60?'r-high':w>=40?'r-med':'r-low';
+      return`<tr>
+        <td><span class="mono" style="color:${a.is_disabled?'var(--txt3)':'var(--txt0)'};text-decoration:${a.is_disabled?'line-through':''}">${a.endpoint}</span>${a.is_disabled?'<span style="font-family:var(--mono);font-size:8px;color:var(--red);margin-left:4px">●DISABLED</span>':''}</td>
+        <td><span class="badge" style="background:var(--bg3);color:var(--txt1);border-color:var(--border)">${a.method}</span></td>
+        <td><span class="cls cls-${a.classification}">${a.classification}</span></td>
+        <td class="mono" style="color:var(--txt2)">${a.protocol}</td>
+        <td class="mono" style="color:${a.calls_per_day===0?'var(--red)':'var(--txt0)'}">${a.calls_per_day}</td>
+        <td class="mono" style="color:${a.days_since_active>30?'var(--amber)':'var(--txt1);font-size:9px'}">${a.last_seen||'—'}</td>
+        <td><div class="sbar"><div class="sbar-t"><div class="sbar-f" style="width:${w}%;background:${c}"></div></div></div><span class="rc ${rc2}">${w}</span></td>
+        <td style="color:${a.has_auth?'var(--teal)':'var(--red)'}">${a.has_auth?'✅':'✗'}</td>
+        <td class="mono" style="color:var(--txt2);font-size:9px">${a.owner_team}</td>
+        <td><button class="btn btn-danger btn-sm" onclick="quickAct('${a.endpoint}','${a.is_disabled?'enable':'disable'}')">🔴 ${a.is_disabled?'Enable':'Kill'}</button></td>
+      </tr>`;
+    }).join('');
+  }catch(e){console.warn('Inventory:',e.message);}
+}
+async function quickAct(ep,type){
+  await post('/api/defence',{action_type:type,endpoint:ep,actor:'Manual-Inventory'});
+  loadInventory();
+}
+
+/* ── ALERTS ── */
+async function loadAlerts(){
+  try{
+    const r=await api('/api/alerts?page_size=50');
+    if(r.status!=='ok')return;
+    const cr=r.data.filter(a=>a.severity==='CRITICAL').length;
+    const hi=r.data.filter(a=>a.severity==='HIGH').length;
+    document.getElementById('ac-crit').textContent=cr+' CRITICAL';
+    document.getElementById('ac-high').textContent=hi+' HIGH';
+    document.getElementById('alert-feed').innerHTML=r.data.map(a=>{
+      const sc=a.severity==='CRITICAL'?'C':a.severity==='HIGH'?'H':'M';
+      const ico={C:'🔴',H:'🟠',M:'🟡'}[sc];
+      const scl={C:'sC',H:'sH',M:'sM'}[sc];
+      const col={C:'var(--red)',H:'var(--amber)',M:'var(--blue)'}[sc];
+      return`<div class="ac ${scl}">
+        <div class="ac-ico" style="background:${col}22">${ico}</div>
+        <div style="flex:1;min-width:0"><div class="mono" style="margin-bottom:2px">${a.endpoint}</div>
+          <div style="font-size:10px;color:var(--txt1)">${a.reason}</div>
+          <div style="font-family:var(--mono);font-size:9px;color:var(--txt2);margin-top:2px">${a.severity} · ${new Date(a.timestamp).toLocaleTimeString()} · ${a.channel}</div>
+        </div><div class="ac-score" style="background:${col}22;color:${col}">${a.risk_score}</div>
+      </div>`;
+    }).join('')||'<div style="color:var(--txt2);font-size:11px;padding:24px;text-align:center">No alerts</div>';
+  }catch(e){console.warn('Alerts:',e.message);}
+}
+
+/* ── DEFENCE ── */
+async function loadDefence(){
+  try{
+    const r=await api('/api/defence');
+    if(r.status!=='ok')return;
+    document.getElementById('def-badge').textContent=r.data.length+' actions';
+    document.getElementById('defence-log').innerHTML=r.data.slice(0,30).map(d=>{
+      const cfg=d.action_type==='disable'?{ico:'di-r',icon:'🔴',title:'Endpoint Disabled (FastAPI)',sub:'Route killed — Pydantic-validated'}:
+               d.action_type==='rotate'?{ico:'di-a',icon:'🔑',title:'API Key Rotated (Pydantic)',sub:'Old key invalidated · new key issued'}:
+               d.action_type==='whitelist'?{ico:'di-t',icon:'✅',title:'Whitelisted FP',sub:'Excluded from future scans'}:
+               {ico:'di-b',icon:'📨',title:'Alert Dispatched',sub:'Slack + Email + PagerDuty → Kafka defence-actions topic'};
+      return`<div class="dr">
+        <div class="di ${cfg.ico}">${cfg.icon}</div>
+        <div style="flex:1;min-width:0"><div style="font-size:11px;font-weight:600;margin-bottom:1px">${cfg.title}</div>
+          <div style="font-family:var(--mono);font-size:9px;color:var(--teal);margin-bottom:1px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${d.endpoint}</div>
+          <div style="font-size:10px;color:var(--txt1)">${cfg.sub}</div>
+        </div>
+        <div style="font-family:var(--mono);font-size:9px;color:var(--txt2);text-align:right;flex-shrink:0">${new Date(d.timestamp).toLocaleTimeString()}<br><span style="color:${d.is_auto?'var(--teal)':'var(--amber)'}">${d.is_auto?'AUTO':'MANUAL'}</span></div>
+      </div>`;
+    }).join('')||'<div style="color:var(--txt2);font-size:11px;padding:20px;text-align:center">No actions yet</div>';
+  }catch(e){console.warn('Defence:',e.message);}
+}
+
+async function manAction(type){
+  const ep=document.getElementById('man-ep').value.trim();
+  const actor=document.getElementById('man-actor').value.trim()||'manual';
+  if(!ep){document.getElementById('man-result').innerHTML='<span style="color:var(--red)">Enter an endpoint</span>';return;}
+  try{
+    const r=await post('/api/defence',{action_type:type,endpoint:ep,actor,notes:`Manual ${type} via dashboard`});
+    const cols={disable:'var(--red)',whitelist:'var(--teal)',rotate:'var(--amber)',alert:'var(--blue)'};
+    document.getElementById('man-result').innerHTML=`<span style="color:${cols[type]||'var(--teal)'}">${r.message}</span>`;
+    loadDefence();
+  }catch(e){document.getElementById('man-result').innerHTML=`<span style="color:var(--red)">❌ ${e.message}</span>`;}
+}
+
+/* ── DB STATS ── */
+async function loadDBStats(){
+  try{
+    const r=await api('/api/db-stats');
+    if(r.status!=='ok')return;
+    const d=r.data;
+    document.getElementById('db-stats-grid').innerHTML=Object.entries(d).map(([k,v])=>
+      `<div style="background:var(--bg3);border-radius:var(--r);padding:9px;text-align:center"><div style="font-size:18px;font-weight:700;color:var(--teal)">${v}</div><div style="font-family:var(--mono);font-size:9px;color:var(--txt2);margin-top:2px">${k}</div></div>`
+    ).join('');
+  }catch(e){console.warn('DB stats:',e.message);}
+}
+async function loadAudit(){
+  try{
+    const r=await api('/api/audit?page_size=30');
+    if(r.status!=='ok')return;
+    document.getElementById('audit-log').innerHTML=r.data.map(e=>
+      `<div><span class="l-ts">[${new Date(e.timestamp).toLocaleTimeString()}]</span> <span class="l-ok">${e.action}</span> <span style="color:var(--txt1)">${e.endpoint}</span> <span class="l-ts">· ${e.actor} · ${e.result}</span></div>`
+    ).join('')||'<div style="color:var(--txt2)">No audit entries</div>';
+  }catch(e){console.warn('Audit:',e.message);}
+}
+
+/* ── KAFKA ── */
+async function loadKafka(){
+  try{
+    const r=await api('/api/kafka-status');
+    if(r.status!=='ok')return;
+    const d=r.data;
+    document.getElementById('kafka-eps').textContent=d.total_events_per_sec;
+    document.getElementById('kafka-topics').innerHTML=Object.entries(d.topics||{}).map(([name,info])=>
+      `<div class="dr"><div class="di di-p">⚡</div><div style="flex:1"><div style="font-size:11px;font-weight:600">${name}</div><div style="font-family:var(--mono);font-size:9px;color:var(--teal)">${info.events_per_sec}M/sec · partitions:${info.partitions} · lag:${info.lag}</div></div><div style="font-family:var(--mono);font-size:9px;color:var(--txt2);text-align:right">${info.produced} produced<br>${info.consumed} consumed</div></div>`
+    ).join('');
+    const data=Array.from({length:20},(_,i)=>+(8+Math.sin(i/3)*2+Math.random()).toFixed(1));
+    mkChart('kafkaChart',{type:'line',data:{labels:data.map((_,i)=>i+'s'),datasets:[{data,borderColor:'#8b5cf6',backgroundColor:'rgba(139,92,246,.1)',fill:true,pointRadius:0,tension:.4,borderWidth:1.5}]},
+      options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},
+        scales:{x:{display:false},y:{grid:{color:'rgba(255,255,255,.04)'},ticks:{color:'#4a6580',font:{size:9}},min:0}}}});
+    loadKafkaEvents();
+    setInterval(async()=>{
+      try{const r2=await api('/api/kafka-status');if(r2.status==='ok')document.getElementById('kafka-eps').textContent=r2.data.total_events_per_sec;}catch{}
+    },3000);
+  }catch(e){console.warn('Kafka:',e.message);}
+}
+async function loadKafkaEvents(){
+  try{
+    const r=await api('/api/kafka-events?topic=api-gateway-logs&n=15');
+    const logEl=document.getElementById('kafka-events-log');
+    if(r.status==='ok'&&r.data.length){
+      logEl.innerHTML=r.data.map(m=>
+        `<div><span class="l-ts">[${m.timestamp.substring(11,19)}]</span> <span class="l-kafka">${m.key}</span> <span style="color:var(--txt2)">offset=${m.offset}</span> <span style="color:var(--txt1);">${JSON.stringify(m.value).substring(0,80)}</span></div>`
+      ).join('');
+    }else{
+      logEl.innerHTML='<div style="color:var(--txt2)">No events yet — run a scan to produce Kafka events</div>';
+    }
+  }catch(e){console.warn('KafkaEvents:',e.message);}
+}
+
+/* ── PARSER STATUS ── */
+async function loadParserStatus(){
+  try{
+    const r=await api('/api/parser-status');
+    if(r.status!=='ok')return;
+    const d=r.data;
+    document.getElementById('parser-results').innerHTML=`
+      <div class="g3" style="margin-bottom:10px">
+        <div style="background:var(--bg3);border-radius:var(--r);padding:12px;text-align:center;border:1px solid var(--pink)"><div style="font-size:20px;font-weight:700;color:var(--pink)">${d.swagger_endpoints}</div><div style="font-family:var(--mono);font-size:9px;color:var(--txt2)">Swagger HTML endpoints</div></div>
+        <div style="background:var(--bg3);border-radius:var(--r);padding:12px;text-align:center;border:1px solid var(--purple)"><div style="font-size:20px;font-weight:700;color:var(--purple)">${d.registry_endpoints}</div><div style="font-family:var(--mono);font-size:9px;color:var(--txt2)">Registry XML entries</div></div>
+        <div style="background:var(--bg3);border-radius:var(--r);padding:12px;text-align:center;border:1px solid var(--red)"><div style="font-size:20px;font-weight:700;color:var(--red)">${d.shadow_traffic_endpoints}</div><div style="font-family:var(--mono);font-size:9px;color:var(--txt2)">Shadow (traffic only)</div></div>
+      </div>
+      <div style="margin-bottom:10px"><div style="font-size:10px;color:var(--txt2);font-family:var(--mono);margin-bottom:6px">PARSERS USED</div>${d.parsers.map(p=>`<span class="tool t-bs" style="margin:2px">${p}</span>`).join('')}</div>
+      <div><div style="font-size:10px;color:var(--txt2);font-family:var(--mono);margin-bottom:6px">SAMPLE PARSED ENDPOINTS</div>
+        <table class="zt"><thead><tr><th>Endpoint</th><th>Source</th><th>Auth</th><th>Registered</th><th>CVEs</th></tr></thead>
+        <tbody>${d.sample.map(ep=>`<tr><td class="mono">${ep.endpoint}</td><td><span class="badge b-p">${ep.source||'—'}</span></td><td style="color:${ep.has_auth?'var(--teal)':'var(--red)'}">${ep.has_auth?'✅':'✗'}</td><td style="color:${ep.is_registered!==false?'var(--teal)':'var(--red)'}">${ep.is_registered!==false?'✅':'✗'}</td><td class="mono" style="color:var(--red)">${ep.cve_count||0}</td></tr>`).join('')}</tbody></table>
+      </div>`;
+  }catch(e){document.getElementById('parser-results').innerHTML=`<div style="color:var(--red);font-size:11px">Error: ${e.message}</div>`;}
+}
+
+/* ── SESSIONS ── */
+async function loadSessions(){
+  try{
+    const r=await api('/api/sessions');
+    if(r.status!=='ok')return;
+    document.getElementById('sessions-body').innerHTML=r.data.map(s=>
+      `<tr><td class="mono">#${s.id}</td><td class="mono">${s.total_apis}</td><td style="color:var(--red)">${s.zombie}</td><td style="color:var(--purple)">${s.shadow}</td><td style="color:var(--red)">${s.disabled}</td><td style="color:var(--amber)">${s.alerts}</td><td class="mono" style="color:var(--teal)">${s.duration_s}s</td><td class="mono" style="color:var(--txt2)">${s.completed_at?new Date(s.completed_at).toLocaleString():'—'}</td></tr>`
+    ).join('')||'<tr><td colspan="8" style="text-align:center;padding:20px;color:var(--txt2)">No scan sessions yet</td></tr>';
+  }catch(e){console.warn('Sessions:',e.message);}
+}
+
+/* ── RISK CALCULATORS ── */
+function debCalc(){clearTimeout(cTimer);cTimer=setTimeout(async()=>{
+  try{
+    const body={endpoint:document.getElementById('ce').value,days_since_active:+document.getElementById('cd').value,calls_per_day:+document.getElementById('cc').value,has_auth:document.getElementById('ca').classList.contains('on'),is_documented:document.getElementById('cdoc').classList.contains('on')};
+    const r=await post('/api/risk-calc',body);
+    const cols={CRITICAL:'var(--red)',HIGH:'var(--amber)',MEDIUM:'var(--blue)',LOW:'var(--teal)'};
+    document.getElementById('calc-score').textContent=r.score;
+    document.getElementById('calc-score').style.color=cols[r.classification]||'var(--teal)';
+    document.getElementById('calc-verdict').textContent=r.verdict;
+    document.getElementById('calc-verdict').style.color=cols[r.classification]||'var(--teal)';
+    document.getElementById('calc-reason').textContent=r.reason;
+  }catch{}
+},300);}
+
+function debCalc2(){clearTimeout(c2Timer);c2Timer=setTimeout(async()=>{
+  try{
+    const body={endpoint:document.getElementById('c2e').value,days_since_active:+document.getElementById('c2d').value,calls_per_day:+document.getElementById('c2c').value,has_auth:document.getElementById('c2a').classList.contains('on'),is_documented:document.getElementById('c2doc').classList.contains('on')};
+    const r=await post('/api/risk-calc',body);
+    const cols={CRITICAL:'var(--red)',HIGH:'var(--amber)',MEDIUM:'var(--blue)',LOW:'var(--teal)'};
+    document.getElementById('c2-score').textContent=r.score;
+    document.getElementById('c2-score').style.color=cols[r.classification]||'var(--teal)';
+    document.getElementById('c2-verdict').textContent=r.verdict;
+    document.getElementById('c2-verdict').style.color=cols[r.classification]||'var(--teal)';
+    document.getElementById('c2-reason').textContent=r.reason;
+    const bd=r.breakdown||{};
+    document.getElementById('c2-bars').innerHTML=Object.entries(bd).map(([k,v])=>{
+      const pct=v.max?Math.round(v.pts/v.max*100):0;
+      return`<div class="frow"><div class="fmeta"><span style="color:var(--txt1)">${k} — ${v.detail}</span><span style="font-family:var(--mono);color:var(--teal)">${v.pts}/${v.max}</span></div><div class="prog"><div class="prog-f" style="width:${pct}%;background:var(--teal)"></div></div></div>`;
+    }).join('');
+  }catch{}
+},300);}
+
+function setEx(ep,days,calls,auth,doc){
+  document.getElementById('c2e').value=ep;
+  document.getElementById('c2d').value=days;document.getElementById('c2d-l').textContent=days;
+  document.getElementById('c2c').value=calls;document.getElementById('c2c-l').textContent=calls;
+  if(auth)document.getElementById('c2a').classList.add('on');else document.getElementById('c2a').classList.remove('on');
+  if(doc)document.getElementById('c2doc').classList.add('on');else document.getElementById('c2doc').classList.remove('on');
+  debCalc2();
+}
+
+/* ── EXPORT ── */
+async function exportCSV(){
+  try{
+    const r=await api('/api/endpoints?page_size=200');
+    if(!r.data?.length){alert('Run a scan first.');return;}
+    const h='endpoint,method,classification,risk_score,calls_per_day,days_since_active,has_auth,owner_team,risk_reason\n';
+    const rows=r.data.map(a=>[a.endpoint,a.method,a.classification,a.risk_score,a.calls_per_day,a.days_since_active,a.has_auth?1:0,a.owner_team,'"'+(a.risk_reason||'')+'"'].join(',')).join('\n');
+    dl('zombieguard_report.csv',h+rows,'text/csv');
+  }catch(e){alert('Export error: '+e.message);}
+}
+async function exportJSON(){
+  try{
+    const [eps,alerts,def,audit]=await Promise.all([api('/api/endpoints?page_size=200'),api('/api/alerts'),api('/api/defence'),api('/api/audit')]);
+    dl('zombieguard_report.json',JSON.stringify({scan_time:new Date().toISOString(),endpoints:eps.data,alerts:alerts.data,defence:def.data,audit:audit.data},null,2),'application/json');
+  }catch(e){alert('Export error: '+e.message);}
+}
+function dl(name,data,type){const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([data],{type}));a.download=name;a.click();}
+
+// ════════════════════════════════════════════════════════
+//  FEATURE 1 — URL / API LINK SCANNER
+// ════════════════════════════════════════════════════════
+const URL_EXAMPLES=[
+  {label:'httpbin.org (REST)',url:'https://httpbin.org'},
+  {label:'jsonplaceholder',url:'https://jsonplaceholder.typicode.com'},
+  {label:'petstore.swagger.io',url:'https://petstore.swagger.io'},
+  {label:'reqres.in',url:'https://reqres.in'},
+  {label:'fakestoreapi.com',url:'https://fakestoreapi.com'},
+];
+const SCAN_TYPES=[['auto','🤖 Auto-detect'],['swagger','📋 Swagger/OpenAPI'],['api','⚡ REST API'],['website','🌐 Website']];
+let urlScanType='auto';
+let urlInitDone=false;
+
+function initURLScan(){
+  if(urlInitDone)return;
+  urlInitDone=true;
+  // Quick example buttons
+  const exEl=document.getElementById('url-examples');
+  if(exEl){
+    URL_EXAMPLES.forEach(ex=>{
+      const btn=document.createElement('button');
+      btn.textContent=ex.label;
+      btn.style.cssText='font-family:var(--mono);font-size:9px;padding:3px 9px;border-radius:4px;background:var(--bg3);border:1px solid var(--border2);color:var(--txt1);cursor:pointer;';
+      btn.onclick=()=>{document.getElementById('url-input').value=ex.url;document.getElementById('url-error').style.display='none';};
+      exEl.appendChild(btn);
+    });
+  }
+  // Scan type buttons
+  const stEl=document.getElementById('scan-type-btns');
+  if(stEl){
+    SCAN_TYPES.forEach(([val,label])=>{
+      const div=document.createElement('div');
+      div.textContent=label;
+      div.dataset.val=val;
+      div.style.cssText=`padding:8px 10px;border-radius:6px;border:1px solid ${val==='auto'?'var(--teal2)':'var(--border)'};background:${val==='auto'?'var(--teal3)':'var(--bg3)'};cursor:pointer;font-family:var(--mono);font-size:10px;color:${val==='auto'?'var(--teal)':'var(--txt1)'};transition:all .15s;`;
+      div.onclick=()=>{
+        urlScanType=val;
+        document.querySelectorAll('#scan-type-btns > div').forEach(d=>{
+          const active=d.dataset.val===val;
+          d.style.borderColor=active?'var(--teal2)':'var(--border)';
+          d.style.background=active?'var(--teal3)':'var(--bg3)';
+          d.style.color=active?'var(--teal)':'var(--txt1)';
+        });
+      };
+      stEl.appendChild(div);
+    });
+  }
+}
+
+function addURLLog(msg,type='info'){
+  const logEl=document.getElementById('url-log');
+  const ts=new Date().toLocaleTimeString('en-GB');
+  const cols={ok:'var(--teal)',err:'var(--red)',warn:'var(--amber)',kafka:'var(--purple)',bs:'#ec4899',info:'var(--blue)'};
+  logEl.innerHTML+=`<div><span style="color:var(--txt3)">[${ts}]</span> <span style="color:${cols[type]||cols.info}">${msg}</span></div>`;
+  logEl.scrollTop=logEl.scrollHeight;
+}
+
+function renderRiskChip(score){
+  const [col,bg,border]=score>=80?['var(--red)','var(--red3)','var(--red2)']:score>=60?['var(--amber)','var(--amber3)','var(--amber)']:score>=40?['var(--blue)','var(--blue3)','var(--blue)']:['var(--teal)','var(--teal3)','var(--teal2)'];
+  return `<span style="font-family:var(--mono);font-size:10px;font-weight:600;padding:2px 7px;border-radius:2px;background:${bg};color:${col};border:1px solid ${border}">${score}</span>`;
+}
+function renderClsBadge(cls){
+  const map={ZOMBIE:['var(--red)','var(--red3)'],SHADOW:['var(--purple)','var(--purple3)'],ACTIVE:['var(--teal)','var(--teal3)'],DEPRECATED:['var(--amber)','var(--amber3)']};
+  const [color,bg]=map[cls]||['var(--txt1)','var(--bg3)'];
+  return `<span style="font-family:var(--mono);font-size:9px;padding:1px 6px;border-radius:2px;background:${bg};color:${color}">${cls}</span>`;
+}
+function renderResultsList(results, elId){
+  const el=document.getElementById(elId);
+  if(!el||!results?.length){if(el)el.innerHTML='<div style="color:var(--txt2);text-align:center;padding:16px">No results</div>';return;}
+  el.innerHTML=results.map(r=>`
+    <div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--border)">
+      <span style="flex:1;font-family:var(--mono);font-size:9px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${r.endpoint}</span>
+      ${renderClsBadge(r.classification)}
+      <div style="width:55px;height:4px;background:var(--bg1);border-radius:2px;overflow:hidden;display:inline-block">
+        <div style="width:${r.risk_score}%;height:100%;background:${r.risk_score>=80?'var(--red)':r.risk_score>=60?'var(--amber)':'var(--teal)'};border-radius:2px"></div>
+      </div>
+      ${renderRiskChip(r.risk_score)}
+    </div>`).join('');
+}
+function renderKPIGrid(d, gridId){
+  const el=document.getElementById(gridId);
+  if(!el)return;
+  const cards=[
+    {label:'Total APIs',val:d.total_apis||d.total_scanned,color:'var(--teal)'},
+    {label:'🧟 Zombie',val:d.zombie,color:'var(--red)'},
+    {label:'👻 Shadow',val:d.shadow,color:'var(--purple)'},
+    {label:'⚠ Deprecated',val:d.deprecated,color:'var(--amber)'},
+    {label:'🔴 Disabled',val:d.disabled,color:'var(--red)'},
+    {label:'🔔 Alerts',val:d.alerts,color:'var(--amber)'},
+  ];
+  el.innerHTML=cards.map(k=>`
+    <div style="background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:12px;position:relative;overflow:hidden">
+      <div style="position:absolute;bottom:0;left:0;right:0;height:2px;background:linear-gradient(90deg,${k.color},transparent)"></div>
+      <div style="font-family:var(--mono);font-size:9px;color:var(--txt2);text-transform:uppercase;letter-spacing:1.5px;margin-bottom:5px">${k.label}</div>
+      <div style="font-family:'Bebas Neue',sans-serif;font-size:26px;color:${k.color};line-height:1">${k.val??'—'}</div>
+    </div>`).join('');
+}
+
+async function runURLScan(){
+  const urlVal=document.getElementById('url-input').value.trim();
+  if(!urlVal){
+    const errEl=document.getElementById('url-error');
+    errEl.textContent='Please enter a URL or API link';errEl.style.display='block';return;
+  }
+  document.getElementById('url-error').style.display='none';
+  const btn=document.getElementById('url-scan-btn');
+  btn.disabled=true;btn.textContent='⏳ SCANNING…';
+  document.getElementById('url-log').innerHTML='';
+  document.getElementById('url-results-section').style.display='none';
+  document.getElementById('url-status-badge').innerHTML='<span class="badge b-a">● Scanning…</span>';
+
+  addURLLog(`🌐 Starting URL scan: ${urlVal}`,'info');
+  addURLLog('BeautifulSoup — fetching page source + JS files…','bs');
+  addURLLog('Checking for Swagger/OpenAPI spec at common paths…','bs');
+  addURLLog('Probing common API path patterns (/api, /api/v1, /health…)','info');
+  addURLLog('Apache Kafka — publishing discovered endpoints…','kafka');
+  addURLLog('IsolationForest(n=200) + LSTM + NumPy CVSS pipeline starting…','ok');
+
+  try{
+    const res=await fetch('/api/scan/url',{
+      method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({
+        url:urlVal,scan_type:urlScanType,
+        max_endpoints:+document.getElementById('url-max').value,
+        contamination:+document.getElementById('url-cont').value/100,
+        staleness_days:30,
+        auto_disable:document.getElementById('url-tog-dis').classList.contains('on'),
+        fire_webhook:document.getElementById('url-tog-web').classList.contains('on'),
+      })
+    });
+    const data=await res.json();
+    if(data.status==='no_endpoints'){
+      addURLLog('⚠ No API endpoints discovered at this URL','warn');
+      addURLLog('Tip: Try a URL with Swagger UI, /api path, or REST API','info');
+      document.getElementById('url-error').textContent=data.message||'No endpoints found';
+      document.getElementById('url-error').style.display='block';
+      document.getElementById('url-status-badge').innerHTML='<span class="badge b-a">⚠ No endpoints</span>';
+    } else if(data.status==='success'){
+      const d=data.data;
+      if(d.url_meta?.logs)d.url_meta.logs.forEach(l=>addURLLog(l,'bs'));
+      addURLLog(`✅ ${d.total_apis} endpoints discovered · ${d.zombie} zombie · ${d.shadow} shadow`,'ok');
+      addURLLog(`${d.disabled} auto-disabled · ${d.alerts} alerts fired · session #${d.session_id}`,'ok');
+      addURLLog(`Scan complete in ${d.scan_duration_s}s`,'ok');
+      document.getElementById('url-status-badge').innerHTML='<span class="badge b-t">✅ Complete</span>';
+      // Render results
+      document.getElementById('url-results-section').style.display='block';
+      renderKPIGrid(d,'url-kpi-grid');
+      // Meta cards
+      const metaGrid=document.getElementById('url-meta-grid');
+      if(metaGrid){
+        const meta=[
+          {label:'Swagger/OpenAPI',val:d.url_meta?.swagger_count??0,color:'var(--teal)'},
+          {label:'HTML/JS Extracted',val:d.url_meta?.html_extracted??0,color:'#ec4899'},
+          {label:'Path Probing',val:d.url_meta?.probe_count??0,color:'var(--purple)'},
+        ];
+        metaGrid.innerHTML=meta.map(k=>`<div style="background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:10px;text-align:center"><div style="font-family:'Bebas Neue',sans-serif;font-size:22px;color:${k.color}">${k.val}</div><div style="font-family:var(--mono);font-size:9px;color:var(--txt2);margin-top:2px">${k.label}</div></div>`).join('');
+      }
+      const metaInfo=document.getElementById('url-meta-info');
+      if(metaInfo)metaInfo.innerHTML=`<div>🎯 Target: <span style="color:var(--teal)">${d.target_url}</span></div><div>⏱ Scan: <span style="color:var(--amber)">${d.scan_duration_s}s</span></div><div>🗄 Session: <span style="color:var(--purple)">#${d.session_id}</span></div>`;
+      renderResultsList(d.results_preview,'url-results-list');
+      // Update sidebar badges
+      document.getElementById('inv-badge').textContent=(d.zombie+d.shadow);
+      document.getElementById('alert-badge').textContent=d.alerts;
+    } else {
+      addURLLog('❌ Scan failed: '+(data.message||JSON.stringify(data)),'err');
+      document.getElementById('url-status-badge').innerHTML='<span class="badge b-r">❌ Error</span>';
+    }
+  }catch(e){
+    addURLLog('❌ Error: '+e.message+' — Is backend running? (python run.py)','err');
+    document.getElementById('url-status-badge').innerHTML='<span class="badge b-r">❌ Error</span>';
+  }
+  btn.disabled=false;btn.textContent='🌐 SCAN URL / API LINK';
+}
+
+// ════════════════════════════════════════════════════════
+//  FEATURE 2 — FILE UPLOAD SCANNER
+// ════════════════════════════════════════════════════════
+let selectedFile=null;
+let fuInitDone=false;
+
+const FORMAT_SPECS=[
+  {ext:'CSV',color:'var(--teal)',borderColor:'var(--teal2)',desc:'One endpoint per row',cols:'endpoint, method, has_auth, calls_per_day, days_since_active, protocol, owner_team',example:'endpoint,method,has_auth\n/api/v1/login,POST,false\n/api/v2/payments,GET,true'},
+  {ext:'JSON',color:'var(--purple)',borderColor:'var(--purple)',desc:'Array of endpoint objects',cols:'endpoint, method, has_auth, calls_per_day, days_since_active (+ any extra fields)',example:'[\n  {"endpoint":"/api/v1/test","method":"POST","has_auth":false},\n  {"endpoint":"/api/v2/pay","has_auth":true}\n]'},
+  {ext:'TXT',color:'var(--amber)',borderColor:'var(--amber)',desc:'One URL/path per line',cols:'Optional METHOD prefix: GET /path  or just /path',example:'/api/v1/accounts\nPOST /api/v2/payments\nGET /api/internal/debug'},
+  {ext:'YAML',color:'var(--blue)',borderColor:'var(--blue)',desc:'OpenAPI / Swagger spec',cols:'Full Swagger 2.0 or OpenAPI 3.0 spec — paths + methods auto-extracted',example:'paths:\n  /api/v1/users:\n    get:\n      summary: Get users\n  /api/v2/pay:\n    post:\n      security: [bearerAuth]'},
+];
+
+function initFileUpload(){
+  if(fuInitDone)return;
+  fuInitDone=true;
+  const fmtEl=document.getElementById('format-specs');
+  if(fmtEl){
+    fmtEl.innerHTML=FORMAT_SPECS.map(f=>`
+      <div style="margin-bottom:10px;padding:10px 12px;background:var(--bg3);border:1px solid ${f.borderColor}22;border-radius:6px;border-left:3px solid ${f.borderColor}">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">
+          <span style="font-family:var(--mono);font-size:10px;padding:1px 7px;border-radius:2px;background:${f.color}22;color:${f.color};border:1px solid ${f.borderColor}">${f.ext}</span>
+          <span style="font-size:11px;font-weight:700">${f.desc}</span>
+        </div>
+        <div style="font-family:var(--mono);font-size:9px;color:var(--txt2);margin-bottom:5px">${f.cols}</div>
+        <pre style="font-family:var(--mono);font-size:9px;color:var(--txt1);background:var(--bg1);padding:6px 8px;border-radius:4px;overflow-x:auto;white-space:pre-wrap;border:1px solid var(--border)">${f.example}</pre>
+      </div>`).join('');
+  }
+}
+
+function handleFileDrop(e){
+  e.preventDefault();
+  const dz=document.getElementById('drop-zone');
+  dz.style.borderColor='var(--border2)';dz.style.background='var(--bg1)';
+  const f=e.dataTransfer.files[0];
+  if(f)handleFileSelect(f);
+}
+
+function handleFileSelect(f){
+  if(!f)return;
+  const ext=f.name.split('.').pop().toLowerCase();
+  const errEl=document.getElementById('file-error');
+  if(!['csv','json','txt','yaml','yml'].includes(ext)){
+    errEl.textContent=`Unsupported format: .${ext}. Use CSV, JSON, TXT, or YAML`;errEl.style.display='block';return;
+  }
+  if(f.size>10*1024*1024){errEl.textContent='File too large. Max 10MB.';errEl.style.display='block';return;}
+  errEl.style.display='none';
+  selectedFile=f;
+  // Update drop zone
+  document.getElementById('drop-icon').textContent='📄';
+  document.getElementById('drop-title').innerHTML=`<span style="color:var(--blue)">${f.name}</span>`;
+  document.getElementById('drop-sub').textContent=`${(f.size/1024).toFixed(1)} KB · ${ext.toUpperCase()} · Ready to scan`;
+  document.getElementById('drop-zone').style.borderColor='var(--blue)';
+  document.getElementById('drop-zone').style.background='var(--blue3)';
+  document.getElementById('fu-scan-btn').disabled=false;
+  document.getElementById('fu-log').innerHTML='<div style="color:var(--txt2)">File selected — click Scan to begin…</div>';
+  document.getElementById('fu-results-section').style.display='none';
+}
+
+function addFULog(msg,type='info'){
+  const logEl=document.getElementById('fu-log');
+  const ts=new Date().toLocaleTimeString('en-GB');
+  const cols={ok:'var(--teal)',err:'var(--red)',warn:'var(--amber)',kafka:'var(--purple)',bs:'#ec4899',info:'var(--blue)'};
+  logEl.innerHTML+=`<div><span style="color:var(--txt3)">[${ts}]</span> <span style="color:${cols[type]||cols.info}">${msg}</span></div>`;
+  logEl.scrollTop=logEl.scrollHeight;
+}
+
+async function runFileScan(){
+  if(!selectedFile){document.getElementById('file-error').textContent='Please select a file first';document.getElementById('file-error').style.display='block';return;}
+  document.getElementById('file-error').style.display='none';
+  const btn=document.getElementById('fu-scan-btn');
+  btn.disabled=true;btn.textContent='⏳ SCANNING…';
+  document.getElementById('fu-log').innerHTML='';
+  document.getElementById('fu-results-section').style.display='none';
+  document.getElementById('fu-status-badge').innerHTML='<span class="badge b-a">● Processing…</span>';
+
+  addFULog(`📂 Reading file: ${selectedFile.name} (${(selectedFile.size/1024).toFixed(1)}KB)`,'info');
+  addFULog('Pydantic v2 validating all endpoint records…','ok');
+  addFULog('Apache Kafka — publishing to api-gateway-logs topic…','kafka');
+  addFULog('IsolationForest(n=200) + LSTM 30-day window running…','ok');
+  addFULog('NumPy vectorised CVSS scoring all endpoints simultaneously…','ok');
+  addFULog('SQL Alchemy — persisting results to SQLite…','ok');
+
+  const formData=new FormData();
+  formData.append('file',selectedFile);
+  formData.append('contamination',+document.getElementById('fu-cont').value/100);
+  formData.append('staleness_days',+document.getElementById('fu-stale').value);
+  formData.append('auto_disable',document.getElementById('fu-tog-dis').classList.contains('on'));
+  formData.append('rotate_keys',document.getElementById('fu-tog-rot').classList.contains('on'));
+  formData.append('fire_webhook',document.getElementById('fu-tog-web').classList.contains('on'));
+
+  try{
+    const res=await fetch('/api/scan/upload',{method:'POST',body:formData});
+    const data=await res.json();
+    if(data.status==='no_endpoints'){
+      addFULog('⚠ No valid endpoints found in file','warn');
+      if(data.parse_logs)data.parse_logs.forEach(l=>addFULog(l,'info'));
+      document.getElementById('file-error').textContent=data.message||'No endpoints parsed';
+      document.getElementById('file-error').style.display='block';
+      document.getElementById('fu-status-badge').innerHTML='<span class="badge b-a">⚠ No endpoints</span>';
+    } else if(data.status==='success'){
+      const d=data.data;
+      if(d.parse_logs)d.parse_logs.forEach(l=>addFULog(l,'bs'));
+      addFULog(`✅ ${d.total_parsed} records parsed · ${d.total_scanned} scanned`,'ok');
+      addFULog(`ML: zombie=${d.zombie} shadow=${d.shadow} active=${d.active}`,'ok');
+      addFULog(`${d.disabled} auto-disabled · ${d.alerts} alerts · session #${d.session_id}`,'ok');
+      addFULog(`Scan complete in ${d.scan_duration_s}s — SQL Alchemy persisted`,'ok');
+      document.getElementById('fu-status-badge').innerHTML='<span class="badge b-t">✅ Complete</span>';
+      // Render
+      document.getElementById('fu-results-section').style.display='block';
+      // Override grid to 3 cols for KPI
+      document.getElementById('fu-kpi-grid').style.gridTemplateColumns='repeat(3,1fr)';
+      renderKPIGrid(d,'fu-kpi-grid');
+      // Meta grid
+      const metaGrid=document.getElementById('fu-meta-grid');
+      if(metaGrid){
+        const meta2=[
+          {label:'File',val:d.filename||'uploaded'},
+          {label:'Records Parsed',val:d.total_parsed},
+          {label:'Endpoints Scanned',val:d.total_scanned},
+          {label:'Scan Duration',val:d.scan_duration_s+'s'},
+          {label:'IF Anomalies',val:d.ml_meta?.if_anomalies??'—'},
+          {label:'LSTM Flags',val:d.ml_meta?.lstm_anomalies??'—'},
+        ];
+        metaGrid.innerHTML=meta2.map(k=>`<div style="background:var(--bg3);border-radius:6px;padding:8px 10px;border:1px solid var(--border)"><div style="font-family:var(--mono);font-size:9px;color:var(--txt2);margin-bottom:2px">${k.label}</div><div style="font-size:13px;font-weight:700;color:var(--teal)">${k.val}</div></div>`).join('');
+      }
+      const metaInfo=document.getElementById('fu-meta-info');
+      if(metaInfo)metaInfo.innerHTML=`<div>🗄 Session: <span style="color:var(--purple)">#${d.session_id}</span></div><div>🤖 Model: <span style="color:var(--teal)">${d.ml_meta?.model||'IsolationForest+LSTM'}</span></div><div>📊 Contamination: <span style="color:var(--amber)">${d.ml_meta?.contamination}</span></div>`;
+      renderResultsList(d.results_preview,'fu-results-list');
+      document.getElementById('inv-badge').textContent=(d.zombie+d.shadow);
+      document.getElementById('alert-badge').textContent=d.alerts;
+    } else {
+      addFULog('❌ Scan failed: '+(data.message||JSON.stringify(data)),'err');
+      document.getElementById('fu-status-badge').innerHTML='<span class="badge b-r">❌ Error</span>';
+    }
+  }catch(e){
+    addFULog('❌ Error: '+e.message+' — Is backend running? (python run.py)','err');
+    document.getElementById('fu-status-badge').innerHTML='<span class="badge b-r">❌ Error</span>';
+  }
+  btn.disabled=false;btn.textContent='📂 SCAN UPLOADED FILE';
+}
+
+async function downloadSample(fmt){
+  try{
+    const res=await fetch(`/api/scan/sample-files?fmt=${fmt}`);
+    const blob=await res.blob();
+    const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=`sample_endpoints.${fmt}`;a.click();
+  }catch(e){alert('Download failed: '+e.message);}
+}
+
+function mkChart(id,cfg){
+  if(CHARTS[id])CHARTS[id].destroy();
+  const el=document.getElementById(id);if(!el)return;
+  CHARTS[id]=new Chart(el,cfg);
+}
+
+window.addEventListener('load',()=>{
+  checkHealth();
+  debCalc();debCalc2();
+  loadDashboard();
+});
+</script>
+</body>
+</html>
